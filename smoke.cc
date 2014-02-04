@@ -132,7 +132,9 @@ static void* accepting_thread(event_info_t* ei)
                   t=(t+1)%P_TH_N; // round robin
 
                   event.data.ptr = sock;                  
-                  event.events = EPOLLIN | EPOLLET;
+                  event.events = EPOLLOUT | EPOLLIN | EPOLLET;
+
+//http://linux.die.net/man/7/epoll When used as an edge-triggered interface, for performance reasons, it is possible to add the file descriptor inside the epoll interface (EPOLL_CTL_ADD) once by specifying (EPOLLIN|EPOLLOUT). This allows you to avoid continuously switching between EPOLLIN and EPOLLOUT calling epoll_ctl(2) with EPOLL_CTL_MOD.
                  
                   on_connect_cb(*sock);
 
@@ -188,18 +190,22 @@ static void* processing_thread(event_info_t* ei)
         continue;
       }
 
+      LOG("ev %d:%d\n",events[i].events & EPOLLOUT, events[i].events & EPOLLIN);
+
 
       if (events[i].events & EPOLLOUT) {
         if(sock->on_write_cb){
           sock->on_write_cb(*sock);
         }
-       continue;
+//       continue;
       } // OUT
 
 
       if (events[i].events & EPOLLIN) {
-        sock->on_read_cb(*sock);
-        continue;
+        if(sock->on_read_cb){
+         sock->on_read_cb(*sock);
+        }
+//        continue;
       } // IN
 
 
@@ -251,8 +257,17 @@ int smoke::socket_t::make_writable()
   return epoll_ctl (epfd, EPOLL_CTL_MOD, fd, &event);
 }
 
+int smoke::socket_t::make_del()
+{
+  struct epoll_event event;
+  event.events = 0;
+  return epoll_ctl (epfd, EPOLL_CTL_DEL, fd, &event);
+}
+
+
 void smoke::socket_t::so_close(){
     if(on_close_cb){on_close_cb(*this);}
+    make_del();
     close(fd);
     delete this;
 };

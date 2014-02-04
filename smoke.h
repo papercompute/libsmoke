@@ -101,6 +101,7 @@ struct socket_t
   
   int make_readable();
   int make_writable();
+  int make_del();
 
   int write(const char* buf, int len, int& n);
   int read(const char* buf, int len, int& n);

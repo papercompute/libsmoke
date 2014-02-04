@@ -26,21 +26,26 @@ int main (int argc, char *argv[])
  
 
   net.createServer([](sock_t& sock){
+//      LOG("on_con\n");
     in_s++;
     sock.on_read([](sock_t& sock){
+//      LOG("on_read\n");
+
      char buf[R_BUF_MAX];
      int nread=0;
      int r=sock.read(buf,R_BUF_MAX,nread);
      if(nread>0){
       buf[nread]=0;
-      sock.make_writable();
+//      sock.make_writable();
      }
      else{
       sock.so_close();
+      LOG("ERROR, nread=%d,r=%d\n",nread,r);
+      return;
      }
-    });
+//    });
 
-    sock.on_write([](sock_t& sock){
+//    sock.on_write([](sock_t& sock){
       int nwritten=0;
 
       std::ostringstream os_h,os_b;      
@@ -56,15 +61,20 @@ int main (int argc, char *argv[])
           <<"Content-Type: text/html\r\n"
           <<"Content-Length: "<<str_b.length()<<"\r\n"
           <<"Connection: close\r\n"
-          <<"\r\n"<<str_b;
+          <<"\r\n";
 
-      auto str_a=os_h.str();
+      auto str_h=os_h.str();
 
-     sock.write(str_a.c_str(),str_a.length(),nwritten);
+     sock.write(str_h.c_str(),str_h.length(),nwritten);
+     sock.write(str_b.c_str(),str_b.length(),nwritten);
      sock.so_close();
     });
 
+    sock.on_write([](sock_t& sock){
+//      LOG("on_write\n");
+    }); 
     sock.on_close([](sock_t& sock){ 
+//      LOG("on_close\n");
      out_s++;
     });
   });

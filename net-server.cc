@@ -39,9 +39,12 @@ int main (int argc, char *argv[])
 //      sock.make_writable();
      }
      else{
-      sock.so_close();
-      LOG("ERROR, nread=%d,r=%d\n",nread,r);
-      return;
+//      if(sock.check()!=0){
+//       sock.so_close();
+//       return;
+//      }
+       sock.so_close();
+       return;
      }
 //    });
 

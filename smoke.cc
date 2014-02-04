@@ -2,7 +2,7 @@
 
 #define NR_CPUS_ON 4
 #define A_TH_N 1
-#define P_TH_N 1
+#define P_TH_N 2
 
 #define MAXEVENTS_A 256
 #define MAXEVENTS_P 512
@@ -22,7 +22,6 @@ struct event_info_t
 
   smoke::net_t *net;  
 };
-
 
 
 static int make_socket_non_blocking (int sfd)
@@ -185,12 +184,14 @@ static void* processing_thread(event_info_t* ei)
       sock=(smoke::socket_t*)events [i].data.ptr;
       sock->th_id=id;
 
-      if (!(events[i].events & ( EPOLLIN | EPOLLOUT ))){             
+//      LOG("ev %d:%d\n",events[i].events & EPOLLOUT, events[i].events & EPOLLIN);
+
+      if (!(events[i].events & ( EPOLLIN | EPOLLOUT ))){        
+        LOG("close socket");     
         sock->so_close();
         continue;
       }
 
-      LOG("ev %d:%d\n",events[i].events & EPOLLOUT, events[i].events & EPOLLIN);
 
 
       if (events[i].events & EPOLLOUT) {
@@ -262,6 +263,17 @@ int smoke::socket_t::make_del()
   struct epoll_event event;
   event.events = 0;
   return epoll_ctl (epfd, EPOLL_CTL_DEL, fd, &event);
+}
+
+int smoke::socket_t::check()
+{
+   int r;
+   int code;
+   size_t len = sizeof(int);
+
+   r = getsockopt(fd, SOL_SOCKET, SO_ERROR, &code, &len);
+
+   return r | code;
 }
 
 

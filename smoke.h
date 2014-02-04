@@ -122,12 +122,6 @@ struct socket_t
 struct net_t
 {
 
-  int opened_socks;
-  int closed_socks;
-/*
-  int cons(){return open_socks-closed_socks;};
-*/
-  net_t():opened_socks(0),closed_socks(0){};
   net_t& createServer(std::function<void(socket_t&)> cb)
   {
     on_connect_cb=cb;

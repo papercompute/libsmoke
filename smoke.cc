@@ -144,8 +144,6 @@ static void* accepting_thread(event_info_t* ei)
                       break;
                   }
 
-                  net->opened_socks++;
-
      
               }
 
@@ -163,12 +161,8 @@ static void* accepting_thread(event_info_t* ei)
 static void* processing_thread(event_info_t* ei)
 {
 
-  int i,nfds;//n,l,nread,nwrite,data_size;
+  int i,nfds;
   int pfd;
-  
-//  char* buf;
-//  char rbuf[R_BUF_MAX]; 
-  
 
   struct epoll_event event;
   struct epoll_event *events;
@@ -188,8 +182,6 @@ static void* processing_thread(event_info_t* ei)
 
       sock=(smoke::socket_t*)events [i].data.ptr;
       sock->th_id=id;
-
-//      fd = sock->fd;
 
       if (!(events[i].events & ( EPOLLIN | EPOLLOUT ))){             
         sock->so_close();
@@ -262,7 +254,6 @@ int smoke::socket_t::make_writable()
 void smoke::socket_t::so_close(){
     if(on_close_cb){on_close_cb(*this);}
     close(fd);
-    net->closed_socks++; // todo atomic
     delete this;
 };
 

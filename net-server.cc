@@ -24,38 +24,17 @@ int main (int argc, char *argv[])
   smoke::net_t net;
 
  
-
-  net.createServer([](sock_t& sock){
-//      LOG("on_con\n");
+  net.on_connect([](int fd){
     in_s++;
-    sock.on_read([](sock_t& sock){
-//      LOG("on_read\n");
+  });
 
-     char buf[R_BUF_MAX];
-     int nread=0;
-     int r=sock.read(buf,R_BUF_MAX,nread);
-     if(nread>0){
-      buf[nread]=0;
-//      sock.make_writable();
-     }
-     else{
-//      if(sock.check()!=0){
-//       sock.so_close();
-//       return;
-//      }
-       sock.so_close();
-       return;
-     }
-//    });
-
-//    sock.on_write([](sock_t& sock){
-      int nwritten=0;
-
+  net.on_data([](int fd,const char* data,int nread){
+ 
       std::ostringstream os_h,os_b;      
             
       os_b<<"<!doctype html>\n<html><head><title>smoke test page</title></head>\n<body>" \
             "<h1 style='color:red'>smoke test page!!!</h1>\n"
-            <<"connections: opened("<<in_s<<"): closed("<<out_s<<")\n"
+            <<"connections: opened("<<in_s<<"): closed("<<out_s<<"): current("<<out_s-in_s<<") \n"
             <<"</body></html>";
 
       auto str_b=os_b.str();
@@ -64,29 +43,15 @@ int main (int argc, char *argv[])
           <<"Content-Type: text/html\r\n"
           <<"Content-Length: "<<str_b.length()<<"\r\n"
           <<"Connection: close\r\n"
-          <<"\r\n";
+          <<"\r\n" << str_b;
 
       auto str_h=os_h.str();
-
-     sock.write(str_h.c_str(),str_h.length(),nwritten);
-     sock.write(str_b.c_str(),str_b.length(),nwritten);
-     sock.so_close();
+      int r=write(fd,str_h.c_str(),str_h.length());
+      ASSERT(r>0);
+      close(fd);
     });
 
-    sock.on_write([](sock_t& sock){
-//      LOG("on_write\n");
-    }); 
-    sock.on_close([](sock_t& sock){ 
-//      LOG("on_close\n");
-     out_s++;
-    });
-  });
-
-  
-
-
-  net.listen(port);  
-  
+  smoke_net_run(&net,port);  
 
   return EXIT_SUCCESS;  
 }

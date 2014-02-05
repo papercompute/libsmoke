@@ -24,6 +24,7 @@
 #include <string>
 #include <map>
 #include <unordered_set>
+#include <unordered_map>
 
 namespace smoke {
 
@@ -92,51 +93,16 @@ struct buf_t
 
 struct socket_t
 {
-  int fd;
-  int epfd;
   int id;
   int th_id;
-  int is_closing;
-  net_t* net;
-  
-  int make_readable();
-  int make_writable();
-  int make_del();
-  int check();
-
-  int write(const char* buf, int len, int& n);
-  int read(const char* buf, int len, int& n);
-
-
-  std::function<void(socket_t& sock)> on_read_cb;  
-  std::function<void(socket_t& sock)> on_write_cb;  
-  std::function<void(socket_t& sock)> on_close_cb;
-  
-  socket_t(net_t *n):is_closing(0),net(n){}
-
-  void on_read(std::function<void(socket_t& sock)> cb){on_read_cb=cb;}    
-  void on_write(std::function<void(socket_t& sock)> cb){on_write_cb=cb;}    
-  void on_close(std::function<void(socket_t& sock)> cb){on_close_cb=cb;}  
-  void so_close();
-  
 };
 
 struct net_t
 {
-
-  net_t& createServer(std::function<void(socket_t&)> cb)
-  {
-    on_connect_cb=cb;
-    return *this;
-  }
-
-  bool listen(int port)
-  {
-    return smoke_net_run(this,port)==0;
-  }
-
-  std::function<void(socket_t& sock)> on_connect_cb;  
-
+  std::function<void(int fd)> on_connect_cb;  
+  std::function<void(int fd,const char* data,int nread)> on_data_cb;  
+  void on_data(std::function<void(int fd,const char* data,int nread)> cb){on_data_cb=cb;}    
+  void on_connect(std::function<void(int fd)> cb){on_connect_cb=cb;}    
 };
 
 

@@ -88,18 +88,17 @@ static void* accepting_thread(event_info_t* ei)
 
   int i,s,nfds,t=0;
   int sfd,afd;
-  int sock_id=0;
 
   struct epoll_event event;
   struct epoll_event *events;
   smoke::net_t *net = ei->net;
-  std::function<void(smoke::socket_t&)> on_connect_cb=net->on_connect_cb;
-  smoke::socket_t *sock;
+  std::function<void(int fd)> on_connect_cb=net->on_connect_cb;
+  ASSERT(on_connect_cb!=NULL);
 
   sfd = ei->sfd;  
   afd = ei->afd;  
 
-  events = (struct epoll_event *)calloc (MAXEVENTS_A, sizeof event);
+   events = (struct epoll_event *)calloc (MAXEVENTS_A, sizeof event);
 
 
     while(1){
@@ -123,27 +122,23 @@ static void* accepting_thread(event_info_t* ei)
 
                   make_socket_non_blocking (infd);
 
-                  sock = new smoke::socket_t(net);
-                  sock->id=sock_id++;
-                  sock->fd = infd;
-                  sock->epfd = ei->pfd[t];
-
-                  t=(t+1)%P_TH_N; // round robin
-
-                  event.data.ptr = sock;                  
-                  event.events = EPOLLOUT | EPOLLIN | EPOLLET;
+                  event.data.fd = infd;                  
+                  event.events = EPOLLRDHUP | EPOLLHUP | EPOLLERR | EPOLLIN | EPOLLOUT | EPOLLET;
 
 //http://linux.die.net/man/7/epoll When used as an edge-triggered interface, for performance reasons, it is possible to add the file descriptor inside the epoll interface (EPOLL_CTL_ADD) once by specifying (EPOLLIN|EPOLLOUT). This allows you to avoid continuously switching between EPOLLIN and EPOLLOUT calling epoll_ctl(2) with EPOLL_CTL_MOD.
-                 
-                  on_connect_cb(*sock);
 
-                  s = epoll_ctl (sock->epfd, EPOLL_CTL_ADD, infd, &event);
+                 
+                  on_connect_cb(infd);
+
+                  s = epoll_ctl (ei->pfd[t], EPOLL_CTL_ADD, infd, &event);
                   
 
                   if (s == -1) {
                       perror ("epoll_ctl");
                       break;
                   }
+
+                  t=(t+1)%P_TH_N; // round robin
 
      
               }
@@ -167,7 +162,15 @@ static void* processing_thread(event_info_t* ei)
 
   struct epoll_event event;
   struct epoll_event *events;
-  smoke::socket_t *sock;  
+
+  smoke::net_t *net = ei->net;
+  std::function<void(int fd,const char* data,int nread)> on_data_cb=net->on_data_cb;
+  ASSERT(on_data_cb!=NULL);
+
+
+  char buf[R_BUF_MAX]; 
+  int n,nread;
+  int fd;
 
   int id=ei->id;
    
@@ -181,32 +184,32 @@ static void* processing_thread(event_info_t* ei)
 
     for (i = 0; i < nfds; i++){
 
-      sock=(smoke::socket_t*)events [i].data.ptr;
-      sock->th_id=id;
+      fd = events [i].data.fd;
 
-//      LOG("ev %d:%d\n",events[i].events & EPOLLOUT, events[i].events & EPOLLIN);
+//      LOG("fd %d,es %x ev %d:%d\n",fd,events[i].events,events[i].events & EPOLLOUT, events[i].events & EPOLLIN);
 
-      if (!(events[i].events & ( EPOLLIN | EPOLLOUT ))){        
-        LOG("close socket");     
-        sock->so_close();
+      if ( events[i].events & ~(EPOLLIN | EPOLLOUT) ){        
+        close(fd);
         continue;
       }
 
 
-
-      if (events[i].events & EPOLLOUT) {
-        if(sock->on_write_cb){
-          sock->on_write_cb(*sock);
-        }
-//       continue;
-      } // OUT
-
-
       if (events[i].events & EPOLLIN) {
-        if(sock->on_read_cb){
-         sock->on_read_cb(*sock);
+
+        n = 0; 
+        while ((nread = read (fd, buf + n, R_BUF_MAX-1))>0){          
+          n += nread;
         }
-//        continue;
+
+        if ((nread == -1 && errno!= EAGAIN) || (n==0)){
+          close(fd);
+          continue;
+        }
+
+
+        buf[n]=0;        
+        on_data_cb(fd,buf,n);
+
       } // IN
 
 
@@ -217,7 +220,7 @@ static void* processing_thread(event_info_t* ei)
     return NULL;
 }
 
-
+/*
 int smoke::socket_t::write(const char* buf, int len, int& n)
 {
  int nwritten;
@@ -278,13 +281,19 @@ int smoke::socket_t::check()
 
 
 void smoke::socket_t::so_close(){
+    LOG("so_close in\n");
     if(on_close_cb){on_close_cb(*this);}
+    LOG("so_close 1\n");
     make_del();
+    LOG("so_close 2\n");
     close(fd);
+    LOG("so_close 3\n");
+    is_closed++;
     delete this;
+    LOG("so_close out\n");
 };
 
-
+*/
 
 int smoke::smoke_net_run (smoke::net_t* net, int portno)
 {

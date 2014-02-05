@@ -4,4 +4,6 @@
 
 current state: very experimental
 
+./wrk -t32 -c10000 -d5m --timeout 60s --latency http://127.0.0.1:9090/
+
 

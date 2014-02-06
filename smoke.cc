@@ -82,6 +82,8 @@ static int create_and_bind (int port)
   return s;
 }
 
+#define EPOLL_EVENTS EPOLLRDHUP | EPOLLHUP | EPOLLERR | EPOLLIN | EPOLLOUT | EPOLLET
+
 
 static void* accepting_thread(event_info_t* ei)
 {
@@ -123,7 +125,7 @@ static void* accepting_thread(event_info_t* ei)
                   make_socket_non_blocking (infd);
 
                   event.data.fd = infd;                  
-                  event.events = EPOLLRDHUP | EPOLLHUP | EPOLLERR | EPOLLIN | EPOLLOUT | EPOLLET;
+                  event.events = EPOLL_EVENTS;
 
 //http://linux.die.net/man/7/epoll When used as an edge-triggered interface, for performance reasons, it is possible to add the file descriptor inside the epoll interface (EPOLL_CTL_ADD) once by specifying (EPOLLIN|EPOLLOUT). This allows you to avoid continuously switching between EPOLLIN and EPOLLOUT calling epoll_ctl(2) with EPOLL_CTL_MOD.
 
@@ -164,9 +166,12 @@ static void* processing_thread(event_info_t* ei)
   struct epoll_event *events;
 
   smoke::net_t *net = ei->net;
-  std::function<void(int fd,const char* data,int nread)> on_data_cb=net->on_data_cb;
-  ASSERT(on_data_cb!=NULL);
+  std::function<int(int fd,const char* data,int nread)> on_data_cb=net->on_data_cb;
+  std::function<int(int fd)> on_write_cb=net->on_write_cb;
+  std::function<int(int fd)> on_read_cb=net->on_read_cb;
 
+  //ASSERT(on_data_cb!=NULL);
+  //ASSERT(on_write_cb!=NULL);
 
   char buf[R_BUF_MAX]; 
   int n,nread;
@@ -195,22 +200,47 @@ static void* processing_thread(event_info_t* ei)
 
 
       if (events[i].events & EPOLLIN) {
-
+       LOG("IN: fd %d, events %x\n",fd,events[i].events);
+       if(on_read_cb){
+        LOG("on_read_cb\n");
+        if(on_read_cb(fd)){
+           event.data.fd = fd;  event.events = EPOLL_EVENTS;
+           epoll_ctl (pfd, EPOLL_CTL_MOD, fd, &event);
+        }        
+       } 
+       if(on_data_cb){ 
+        LOG("on_data_cb\n");
         n = 0; 
         while ((nread = read (fd, buf + n, R_BUF_MAX-1))>0){          
-          n += nread;
+          n += nread; 
         }
-
         if ((nread == -1 && errno!= EAGAIN) || (n==0)){
           close(fd);
           continue;
         }
-
-
         buf[n]=0;        
-        on_data_cb(fd,buf,n);
-
+        if(on_data_cb(fd,buf,n)){
+           event.data.fd = fd;  event.events = EPOLL_EVENTS;
+           epoll_ctl (pfd, EPOLL_CTL_MOD, fd, &event);
+        }
+       } // on_data_cb
+       continue;
       } // IN
+
+
+      if (events[i].events & EPOLLOUT) {
+        LOG("OUT: fd %d, events %x\n",fd,events[i].events);
+
+        if(on_write_cb){
+         LOG("on_write_cb\n");
+         if(on_write_cb(fd)){
+           event.data.fd = fd; 
+           event.events = EPOLL_EVENTS;
+           epoll_ctl (pfd, EPOLL_CTL_MOD, fd, &event);
+         }
+        }
+
+      } // OUT
 
 
     } // for n
@@ -219,6 +249,16 @@ static void* processing_thread(event_info_t* ei)
 
     return NULL;
 }
+
+/*
+int smoke::make_writable(int fd)
+{
+  struct epoll_event event;
+  event.data.fd = fd; 
+  event.events = EPOLLRDHUP | EPOLLHUP | EPOLLERR | EPOLLIN | EPOLLOUT | EPOLLET;
+  return epoll_ctl (epfd, EPOLL_CTL_MOD, fd, &event);
+}
+*/
 
 /*
 int smoke::socket_t::write(const char* buf, int len, int& n)

@@ -76,32 +76,21 @@ namespace smoke {
 #define R_BUF_MAX 4096
 #define W_BUF_MAX 4096
 
-struct socket_t;
 struct net_t;
-//struct req_t;
-//struct res_t;
-
-typedef std::map<std::string, std::string> http_headers_t;
 
 int smoke_net_run (smoke::net_t* net, int portno);
 
-struct buf_t
-{
- char* ptr;
- int len;
-};
-
-struct socket_t
-{
-  int id;
-  int th_id;
-};
 
 struct net_t
 {
+  net_t():on_connect_cb(nullptr),on_read_cb(nullptr),on_write_cb(nullptr),on_data_cb(nullptr){};
   std::function<void(int fd)> on_connect_cb;  
-  std::function<void(int fd,const char* data,int nread)> on_data_cb;  
-  void on_data(std::function<void(int fd,const char* data,int nread)> cb){on_data_cb=cb;}    
+  std::function<int(int fd)> on_read_cb;  
+  std::function<int(int fd)> on_write_cb;  
+  std::function<int(int fd,const char* data,int nread)> on_data_cb;  
+  void on_data(std::function<int(int fd,const char* data,int nread)> cb){on_data_cb=cb;}    
+  void on_read(std::function<int(int fd)> cb){on_read_cb=cb;}    
+  void on_write(std::function<int(int fd)> cb){on_write_cb=cb;}    
   void on_connect(std::function<void(int fd)> cb){on_connect_cb=cb;}    
 };
 

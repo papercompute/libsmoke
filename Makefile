@@ -9,16 +9,12 @@ CFLAGS+=-std=c++11
 
 
 CODE=smoke
-APP=net-server
-#APP=chunk-server
-#APP=echo-server
+#APP=net-server
+#APP=net-echo-server
+APP=net-sendfile-server
 
 $(CODE): $(CODE).h $(CODE).cc $(APP).cc
 	$(CXX) $(CFLAGS) $(CODE).cc $(APP).cc $(LDFLAGS) -o $(APP) 
-
-tcp-echo-server:   
-	$(CXX) $(CFLAGS) $(CODE).cc $@.cc $(LDFLAGS) -o $@ 
-
 
 clean:
 	rm $(APP)

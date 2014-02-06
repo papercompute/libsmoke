@@ -169,10 +169,11 @@ static void* processing_thread(event_info_t* ei)
   std::function<int(int fd,const char* data,int nread)> on_data_cb=net->on_data_cb;
   std::function<int(int fd)> on_write_cb=net->on_write_cb;
   std::function<int(int fd)> on_read_cb=net->on_read_cb;
-
   //ASSERT(on_data_cb!=NULL);
   //ASSERT(on_write_cb!=NULL);
 
+  // fd map here !!!!!!!!!
+  
   char buf[R_BUF_MAX]; 
   int n,nread;
   int fd;

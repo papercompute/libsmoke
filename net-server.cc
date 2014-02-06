@@ -32,17 +32,17 @@ int main (int argc, char *argv[])
       std::ostringstream os_h,os_b;      
             
       os_b<<"<!doctype html>\n<html><head><title>smoke test page</title></head>\n<body>" \
-            "<h1 style='color:red'>smoke test page!!!</h1>\n"
-            <<"connections: opened("<<in_s<<"): closed("<<out_s<<"): current("<<in_s-out_s<<") \n"
-            <<"</body></html>";
+            "<h1 style='color:red'>smoke test page!!!</h1>\n" \
+            "connections: opened("<<in_s<<"): closed("<<out_s<<"): current("<<in_s-out_s<<") \n" \
+            "</body></html>";
 
       auto str_b=os_b.str();
 
-      os_h<<"HTTP/1.1 200 OK\r\n"
-          <<"Content-Type: text/html\r\n"
-          <<"Content-Length: "<<str_b.length()<<"\r\n"
-          <<"Connection: close\r\n"
-          <<"\r\n" << str_b;
+      os_h<<"HTTP/1.1 200 OK\r\n" \
+          "Content-Type: text/html\r\n" \
+          "Content-Length: "<<str_b.length()<<"\r\n" \
+          "Connection: close\r\n" \
+          "\r\n" << str_b;
 
       auto str_h=os_h.str();
       int r=write(fd,str_h.c_str(),str_h.length());

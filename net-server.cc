@@ -4,7 +4,6 @@
 #include <atomic>
 
 
-typedef smoke::socket_t sock_t;
 std::atomic<int> in_s;
 std::atomic<int> out_s;
 
@@ -28,13 +27,13 @@ int main (int argc, char *argv[])
     in_s++;
   });
 
-  net.on_data([](int fd,const char* data,int nread){
+  net.on_data([](int fd,const char* data,int nread)->int{
  
       std::ostringstream os_h,os_b;      
             
       os_b<<"<!doctype html>\n<html><head><title>smoke test page</title></head>\n<body>" \
             "<h1 style='color:red'>smoke test page!!!</h1>\n"
-            <<"connections: opened("<<in_s<<"): closed("<<out_s<<"): current("<<out_s-in_s<<") \n"
+            <<"connections: opened("<<in_s<<"): closed("<<out_s<<"): current("<<in_s-out_s<<") \n"
             <<"</body></html>";
 
       auto str_b=os_b.str();
@@ -49,6 +48,8 @@ int main (int argc, char *argv[])
       int r=write(fd,str_h.c_str(),str_h.length());
       ASSERT(r>0);
       close(fd);
+      out_s++;
+      return 0; 
     });
 
   smoke_net_run(&net,port);  

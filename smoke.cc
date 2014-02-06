@@ -83,7 +83,8 @@ static int create_and_bind (int port)
 }
 
 #define EPOLL_EVENTS EPOLLRDHUP | EPOLLHUP | EPOLLERR | EPOLLIN | EPOLLOUT | EPOLLET
-
+#define EPOLL_FD_FIRST_TIME_MSK 0x7fffffffffffffffULL
+#define EPOLL_FD_FIRST_TIME_BIT 0x8000000000000000ULL
 
 static void* accepting_thread(event_info_t* ei)
 {
@@ -124,10 +125,23 @@ static void* accepting_thread(event_info_t* ei)
 
                   make_socket_non_blocking (infd);
 
-                  event.data.fd = infd;                  
+                  event.data.fd = infd;
+
                   event.events = EPOLL_EVENTS;
 
 //http://linux.die.net/man/7/epoll When used as an edge-triggered interface, for performance reasons, it is possible to add the file descriptor inside the epoll interface (EPOLL_CTL_ADD) once by specifying (EPOLLIN|EPOLLOUT). This allows you to avoid continuously switching between EPOLLIN and EPOLLOUT calling epoll_ctl(2) with EPOLL_CTL_MOD.
+
+//        typedef union epoll_data {
+//               void    *ptr;
+//               int      fd;
+//               uint32_t u32;
+//               uint64_t u64;
+//           } epoll_data_t;
+//
+//           struct epoll_event {
+//               uint32_t     events; 
+//               epoll_data_t data;   
+//           };
 
                  
                   on_connect_cb(infd);
@@ -164,7 +178,7 @@ static void* processing_thread(event_info_t* ei)
 
   struct epoll_event event;
   struct epoll_event *events;
-
+//  uint64_t u64;
   smoke::net_t *net = ei->net;
   std::function<int(int fd,const char* data,int nread)> on_data_cb=net->on_data_cb;
   std::function<int(int fd)> on_write_cb=net->on_write_cb;
@@ -191,7 +205,7 @@ static void* processing_thread(event_info_t* ei)
     for (i = 0; i < nfds; i++){
 
       fd = events [i].data.fd;
-
+//      u64 = events [i].data.u64;
 //      LOG("fd %d,es %x ev %d:%d\n",fd,events[i].events,events[i].events & EPOLLOUT, events[i].events & EPOLLIN);
 
       if ( events[i].events & ~(EPOLLIN | EPOLLOUT) ){        
@@ -201,16 +215,18 @@ static void* processing_thread(event_info_t* ei)
 
 
       if (events[i].events & EPOLLIN) {
-       LOG("IN: fd %d, events %x\n",fd,events[i].events);
+
+
+//       LOG("IN: fd %d, events %x\n",fd,events[i].events);
        if(on_read_cb){
-        LOG("on_read_cb\n");
+//        LOG("on_read_cb\n");
         if(on_read_cb(fd)){
            event.data.fd = fd;  event.events = EPOLL_EVENTS;
            epoll_ctl (pfd, EPOLL_CTL_MOD, fd, &event);
         }        
        } 
        if(on_data_cb){ 
-        LOG("on_data_cb\n");
+//        LOG("on_data_cb\n");
         n = 0; 
         while ((nread = read (fd, buf + n, R_BUF_MAX-1))>0){          
           n += nread; 
@@ -230,13 +246,13 @@ static void* processing_thread(event_info_t* ei)
 
 
       if (events[i].events & EPOLLOUT) {
-        LOG("OUT: fd %d, events %x\n",fd,events[i].events);
+
+//        LOG("OUT: fd %d, events %x\n",fd,events[i].events);
 
         if(on_write_cb){
-         LOG("on_write_cb\n");
+//         LOG("on_write_cb\n");
          if(on_write_cb(fd)){
-           event.data.fd = fd; 
-           event.events = EPOLL_EVENTS;
+           event.data.fd = fd; event.events = EPOLL_EVENTS;
            epoll_ctl (pfd, EPOLL_CTL_MOD, fd, &event);
          }
         }

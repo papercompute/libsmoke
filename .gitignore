@@ -1,4 +1,3 @@
 *~
-net-server
-tcp-echo-server
-net-sendfile-server
+bin
+tmp

@@ -1,15 +1,15 @@
 # smoke
 
-[smoke](https://github.com/papercompute/smoke-epoll) high performance low latency multi-threaded udp/tcp/http/ws server built on top of linux epoll
+[smoke](https://github.com/papercompute/smoke-epoll) high performance low latency multi-threaded/processed udp/tcp/http/ws server built on top of linux epoll/pfring
 
 current state: very experimental
 
-design points:
+design goals:
 
+* no complexity, no external deps
 * accepting thread(s) / round robin
 * processing thread(s) / IO
 * use event.data.fd w/ both IN | OUT
-* map[fd]
 
 testing:
 

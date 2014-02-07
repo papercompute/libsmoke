@@ -1,7 +1,7 @@
 // number accepting threads, 1 is ok
 #define A_TH_N 1
 // number processing threads, = numCPUs
-#define P_TH_N 2
+#define P_TH_N 16
 
 // CALLBACK CODE USE
 
@@ -18,4 +18,4 @@
 //#define USE_ON_WRITE_CB
 
 // use on_close
-//#define USE_ON_CLOSE_CB
+#define USE_ON_CLOSE_CB

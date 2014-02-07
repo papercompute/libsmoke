@@ -8,6 +8,13 @@ std::atomic<int> in_s;
 std::atomic<int> out_s;
 std::atomic<int> err_s;
 
+struct fd_t
+{
+ int wc;
+ int rc;
+};
+
+
 int main (int argc, char *argv[])
 {
   if (argc != 2) {
@@ -23,19 +30,47 @@ int main (int argc, char *argv[])
 
 
   smoke::net_t net;
+  std::unordered_map<int,fd_t> fmap;  
 
  
-  net.on_connect([](int fd){
+  net.on_connect([&](int fd){
     in_s++;
+    fmap[fd].wc=0;fmap[fd].rc=0;
+   
   });
 
   net.on_close([](int fd,int err){
     err_s++;
   });
 
-  net.on_data([](int fd,const char* data,int nread)->int{
- 
-  //    LOGF("on_data[%d]:\n%s",nread,data);
+  net.on_data([&](int fd,const char* data,int nread)->int{
+       fmap[fd].rc++;
+
+       if( nread<17){
+        close(fd);LOG("WTH!!!");
+        out_s++;
+        return 0;
+       }
+
+       if (strncmp(data,"GET / HTTP",10) != 0){
+        #define HTTP404 "HTTP/1.1 404 Not Found" CRLF "Connection: close" CRLF CRLF
+        const char* s=HTTP404;
+        int r=write(fd,s,sizeof(HTTP404)-1);
+        if(r<=0){LOG("write header error, %d\n",errno);}
+        close(fd);
+        out_s++;
+        return 0;
+       }
+      
+
+      return 1; 
+  });
+
+ net.on_write([&](int fd)->int{ 
+
+  if(fmap[fd].wc>0 || fmap[fd].rc>0){ // skip first IO 
+
+//      LOG("on_write:\n");
 
       std::ostringstream os_h,os_b;      
             
@@ -57,11 +92,14 @@ int main (int argc, char *argv[])
 
       auto str_h=os_h.str();
       int r=write(fd,str_h.c_str(),str_h.length());
-      ASSERT(r>0);
-      close(fd);
-      out_s++;
-      return 0; 
+      if(r<=0){LOG("write error, %d\n",errno);}
+      close(fd);  out_s++;
+      return 0; // no write schedule 
+      } // if first IO
+      fmap[fd].wc++;       
+      return 0; // no write schedule
     });
+
 
   smoke_net_run(&net,port);  
 

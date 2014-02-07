@@ -202,7 +202,7 @@ static void* processing_thread(event_info_t* ei)
   ASSERT(on_read_cb);
 #endif  
 #ifdef USE_ON_CLOSE_CB  
-  std::function<int(int fd)> on_close_cb=net->on_close_cb;
+  std::function<void(int fd,int err)> on_close_cb=net->on_close_cb;
   ASSERT(on_close_cb);
 #endif  
 

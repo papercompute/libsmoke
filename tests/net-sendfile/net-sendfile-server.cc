@@ -42,6 +42,8 @@ int main (int argc, char *argv[])
   fstat(file_fd, &stat_buf);
   file_size=stat_buf.st_size;
 
+#define LOG(...)
+
   net.on_connect([&](int fd){
     try{
       LOG("on_connect fd %d\n",fd);
@@ -54,19 +56,31 @@ int main (int argc, char *argv[])
 
   net.on_data([&](int fd,const char* data,int nread)->int{
     try{     
-     LOG("net.on_data: fd %d, wc %d, rc %d\n",fd,fmap[fd].wc, fmap[fd].rc);
+     LOG("net.on_data: fd %d, wc %d, rc %d\n%s\n",fd,fmap[fd].wc, fmap[fd].rc,data);
      if(fmap[fd].rc==0){
-     fmap[fd].rc++;
-     std::ostringstream os_h;
+      fmap[fd].rc++;
+      
+      // GET / HTTP/1.1 
+/*
+      if( strncmp(data,"GET / HTTP/1.1",14) != 0){
+        #define HTTP404 "HTTP/1.1 404 Not Found" CRLF "Connection: close" CRLF CRLF
+        const char* s=HTTP404;
+        int r=write(fd,s,sizeof(HTTP404));
+        if(r<=0){LOG("write header error, %d\n",errno);}
+        close(fd);
+        return 0;
+      }
+*/
+      std::ostringstream os_h;
+      // THIS FOR DEMO ONLY, USE const char* FOR BETTER PERFORMANCE
       os_h<<"HTTP/1.1 200 OK\r\n"
-          <<"Content-Type: text/javascript; charset=UTF-8\r\n"
+          <<"Content-Type: text/html\r\n"
           <<"Connection: keep-alive\r\n"
           <<"Transfer-Encoding: chunked\r\n"
           <<"\r\n";
-          //<< std::hex << stat_buf.st_size<<"\r\n";
-     auto str_h=os_h.str();
-     int r=write(fd,str_h.c_str(),str_h.length());
-     if(r<=0){LOG("write header error, %d\n",errno);}
+      auto str_h=os_h.str();
+      int r=write(fd,str_h.c_str(),str_h.length());
+      if(r<=0){LOG("write header error, %d\n",errno);}
      } else{
       LOG("unexpected data, ignore\n");
       return 0;
@@ -81,10 +95,10 @@ int main (int argc, char *argv[])
   net.on_write([&](int fd)->int{
     try{     
      LOG("net.on_write: fd %d, wc %d\n",fd,fmap[fd].wc);
-     if(fmap[fd].wc>0 || fmap[fd].rc>0){ 
+     if(fmap[fd].wc>0 || fmap[fd].rc>0){ // skip first IO 
      // chunk len
       std::ostringstream os_h;
-      os_h<< std::hex << file_size<<"\r\n";
+      os_h<< std::hex << file_size<<CRLF;
       auto str_h=os_h.str();
       
       int r=write(fd,str_h.c_str(),str_h.length());
@@ -96,15 +110,15 @@ int main (int argc, char *argv[])
       r = sendfile (fd, file_fd, &offset, file_size);  
       if(r<=0){ LOG("sendfile error, %d\n",errno); }
 
-      // write 0
-      r = write(fd,"\r\n0\r\n\r\n",7);
+      // write final 0 
+      r = write(fd,CRLF "0" CRLF CRLF,7);
       if(r<=0){ LOG("write 0 error, %d\n",errno); }
 
      // close fd
 
       close(fd);
       return 0;
-     }
+     } // if
      fmap[fd].wc++;
      return 0;
     }

@@ -39,13 +39,19 @@ namespace smoke {
     fflush(stderr);                    \
   } while (0)
 
-#define LOGL(msg)                                        \
+#define LOGF(fmt, params...)        \
+  do {                                 \
+    fprintf(stderr, fmt "\n", params); \
+    fflush(stderr);                    \
+  } while (0)
+
+#define LOGFL(fmt, params)                                \
   do {                                                    \
     fprintf(stderr,                                       \
-            "Log %s on line %d: %s\n",         \
+            "Log %s on line %d: " fmt "\n",               \
             __FILE__,                                     \
             __LINE__,                                     \
-            msg);                                         \
+            params);                                      \
     fflush(stderr);                                       \
   } while (0)
 

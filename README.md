@@ -1,35 +1,29 @@
-# libsmoke
+## libsmoke
 
 [smoke](https://github.com/papercompute/smoke-epoll) high performance low latency multi-threaded/processed udp/tcp/http/ws server lib built on top of linux epoll/pfring
 
-## current state: 
+### current state: 
 
 very experimental
 
-## design goals:
+### design goals:
 
 * no complexity
 * low latency & high performance
 
-## applications:
+### applications:
 
 * mass multiplayer games
 * realtime apps
 
-## great libs & frameworks:
+### great libs & frameworks:
 
 [nodejs](https://github.com/joyent/node) [libuv](https://github.com/joyent/libuv)
-
 [go](http://golang.org) [erlang](http://www.erlang.org/)
-
 [libev](http://software.schmorp.de/pkg/libev.html) [libevent](http://libevent.org/) [libphenom](http://facebook.github.io/libphenom/)
-
 [tornado](http://www.tornadoweb.org)
-
 [gevent](http://www.gevent.org)
-
 [akka](http://akka.io/)
-
 [play](http://www.playframework.com)
 
 

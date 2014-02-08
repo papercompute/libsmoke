@@ -1,12 +1,7 @@
 // number accepting threads, 1 is ok
 #define A_TH_N 1
 // number processing threads, = numCPUs
-#define P_TH_N 16
-// fd data cache
-#define FDD_CACHE_RANGE 1024*4
-
-//#define DBG LOG
-#define DBG(...)
+#define P_TH_N 2
 
 // CALLBACK CODE USE
 
@@ -23,7 +18,4 @@
 #define USE_ON_WRITE_CB
 
 // use on_close
-#define USE_ON_CLOSE_CB
-
-
-
+//#define USE_ON_CLOSE_CB

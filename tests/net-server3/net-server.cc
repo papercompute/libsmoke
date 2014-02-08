@@ -1,3 +1,4 @@
+#include "smoke_config.h"
 #include "smoke.h"
 
 #include <fstream>
@@ -64,14 +65,6 @@ int main (int argc, char *argv[])
         return 0;
        }
 
-      #define HTTP_CHUNKED "HTTP/1.1 200 OK" CRLF \
-          "Content-Type: text/html" CRLF \
-          "Connection: keep-alive" CRLF \
-          "Transfer-Encoding: chunked" CRLF CRLF
-
-      const char* s=HTTP_CHUNKED;
-      int r=write(fd,s,sizeof(HTTP_CHUNKED)-1);
-      if(r<=0){LOG("write HTTP_CHUNKED header error, %d\n",errno);}
  
       return 1; // shedule write 
   });
@@ -82,6 +75,16 @@ int main (int argc, char *argv[])
  net.on_write([&](int fd)->int{ 
 
   if(fmap[fd].wc>0 || fmap[fd].rc>0){ // skip first IO 
+
+
+      #define HTTP_CHUNKED "HTTP/1.1 200 OK" CRLF \
+          "Content-Type: text/html" CRLF \
+          "Connection: keep-alive" CRLF \
+          "Transfer-Encoding: chunked" CRLF CRLF
+
+      const char* s=HTTP_CHUNKED;
+//      int r=write(fd,s,sizeof(HTTP_CHUNKED)-1);
+ //     if(r<=0){LOG("write HTTP_CHUNKED header error, %d\n",errno);}
 
  //     LOG("on_write:\n");
  //  <HEX><CRLF><chunk><CRLF> ... 0<CRLF><CRLF>
@@ -97,11 +100,11 @@ int main (int argc, char *argv[])
       auto str_b=os_b.str();
 
       std::ostringstream os_h;
-      os_h<< std::hex << str_b.length()<<CRLF<<str_b<<CRLF<<"0"<<CRLF<<CRLF;
+      os_h<< s << std::hex << str_b.length()<<CRLF<<str_b<<CRLF<<"0"<<CRLF<<CRLF;
       auto str_h=os_h.str();
       
       int r=write(fd,str_h.c_str(),str_h.length());
-      if(r<=0){ LOG("write chunk error, %d\n",errno); }
+      if(r<=0){ LOG("write error, %d\n",errno); }
 
 
 //      int r = write(fd,"5" CRLF "hello" CRLF ,3+5+2);

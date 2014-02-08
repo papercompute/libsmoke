@@ -54,23 +54,20 @@ int main (int argc, char *argv[])
 
   net.on_connect([&](int fd){
       in_s++;
-//      LOG("on_connect %d\n",fd);
+      LOG("on_connect %d\n",fd);
       fmap[fd].wc=0;fmap[fd].rc=0;
   });
 
 
   net.on_close([&](int fd,int err){
- //     LOG("on_close %d\n",fd);
+      LOG("on_close %d\n",fd);
       err_s++;
   });
 
   net.on_data([&](int fd,const char* data,int nread)->int{
-     if(fmap[fd].rc>0){
-      close(fd);err_s++;
-      return 0;
-     } 
-//     LOG("on_data fd:%d [%d]:\n%s\n",fd,nread,data);
-     fmap[fd].rc++;
+     if(fmap[fd].rc==0){
+      LOG("on_data fd:%d [%d]:\n%s\n",fd,nread,data);
+      fmap[fd].rc++;
       
       // GET / HTTP/1.1 
 
@@ -82,40 +79,52 @@ int main (int argc, char *argv[])
         close(fd);err_s++;
         return 0;
       }
+
+      std::ostringstream os_h;
+      os_h<<"HTTP/1.1 200 OK\r\n"
+          <<"Content-Type: text/html\r\n"
+          <<"Connection: keep-alive\r\n"
+          <<"Transfer-Encoding: chunked\r\n"
+//          <<"X-Satistics: "<<in_s<<","<<out_s<<","<<err_s<<"\r\n"
+          <<"\r\n";
+      auto str_h=os_h.str();
+      int r=write(fd,str_h.c_str(),str_h.length());
+      if(r<=0){LOG("write header error, %d\n",errno);}
+     } else{
+      close(fd);err_s++;
+      return 0;
+     }
     return 1; // 
   });
 
 
   net.on_write([&](int fd)->int{
-     if(!(fmap[fd].wc>0 || fmap[fd].rc>0)){ 
-      // skip first IO 
-      fmap[fd].wc++;
-      return 0;
-     }
-
-//     LOG("on_write %d\n",fd);
-
-      std::ostringstream os_h;      
-
-      os_h<<"HTTP/1.1 200 OK\r\n" \
-          "Content-Type: text/html\r\n" \
-          "Content-Length: "<<file_size<<"\r\n" \
-          "Connection: close\r\n" \
-          "\r\n";
-
+     if(fmap[fd].wc>0 || fmap[fd].rc>0){ // skip first IO 
+     LOG("on_write %d\n",fd);
+     // chunk len
+      std::ostringstream os_h;
+      os_h<< std::hex << file_size<<CRLF;
       auto str_h=os_h.str();
+      // write chunk head
       int r=write(fd,str_h.c_str(),str_h.length());
-      if(r<=0){ LOG("write error, %d\n",errno); }
+      if(r<=0){ LOG("write chunk header error, %d\n",errno); }
 
-      
+      // write chunk body
       off_t off = 0;
       r = sendfile (fd, file_fd, &off, file_size);  
       if(r<=0){ LOG("sendfile error, %d\n",errno); }
 
-      
-//      LOG("close %d\n",fd);
+      // write final 0 
+      r = write(fd,CRLF "0" CRLF CRLF,7);
+      if(r<=0){ LOG("write 0 error, %d\n",errno); }
+
+      // close fd
+      LOG("close %d\n",fd);
       close(fd); out_s++;
       return 0;
+     } // if
+     fmap[fd].wc++;
+     return 0;
   });
 
 

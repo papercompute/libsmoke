@@ -1,17 +1,38 @@
+#include "smoke_config.h"
+
 #include "smoke.h"
 
 #include <fstream>
 #include <atomic>
 
+#define HTTP404 "HTTP/1.1 404 Not Found" CRLF "Connection: close" CRLF CRLF
 
 std::atomic<int> in_s;
 std::atomic<int> out_s;
 std::atomic<int> err_s;
 
+// fd connection data
 struct fd_t
 {
- int wc;
- int rc;
+ int wc; // write counter 
+ int rc; // read counter
+ fd_t():wc(0),rc(0){};
+ void clear(){wc=rc=0;};
+};
+
+smoke::net_t net; 
+
+// connections map fmap[fd]
+std::unordered_map<int,fd_t> fmap;  
+fd_t fdd[FDD_CACHE_RANGE];
+
+fd_t& get_fdd(int fd){
+ if(fd>=0 && fd<FDD_CACHE_RANGE){
+  // get from faster array
+  return fdd[fd];
+ }
+ // get from std::unordered_map
+ return fmap[fd];
 };
 
 
@@ -27,54 +48,49 @@ int main (int argc, char *argv[])
   err_s=0;
 
   int port = atoi(argv[1]);
-
-
-  smoke::net_t net;
-  std::unordered_map<int,fd_t> fmap;  
-
  
   net.on_connect([&](int fd){
     in_s++;
-    fmap[fd].wc=0;fmap[fd].rc=0;
-   
+    fd_t& fdd=get_fdd(fd);
+    fdd.clear();
+    DBG("on_connect %d\n",fd);
   });
 
   net.on_close([](int fd,int err){
     err_s++;
+    DBG("on_close %d\n",fd);
   });
 
   net.on_data([&](int fd,const char* data,int nread)->int{
-       fmap[fd].rc++;
+    fd_t& fdd=get_fdd(fd);
+    if(fdd.rc>0){ // no more writes
+      LOG("fdd.rc>0\n");
+      return 0; 
+    }
+    fdd.rc++;
 
-       if( nread<17){
-        close(fd);LOG("WTH!!!");
-        out_s++;
-        return 0;
-       }
+    if ( nread<12 || strncmp(data,"GET / HTTP",10) != 0){
+      int r=write(fd,HTTP404,sizeof(HTTP404)-1);
+      if(r<=0){LOG("write header error, %d\n",errno);}
+      close(fd);
+      out_s++;
+      return 0;
+    }
 
-       if (strncmp(data,"GET / HTTP",10) != 0){
-        #define HTTP404 "HTTP/1.1 404 Not Found" CRLF "Connection: close" CRLF CRLF
-        const char* s=HTTP404;
-        int r=write(fd,s,sizeof(HTTP404)-1);
-        if(r<=0){LOG("write header error, %d\n",errno);}
-        close(fd);
-        out_s++;
-        return 0;
-       }
-      
-
-      return 1; 
+    return 1; 
   });
 
- net.on_write([&](int fd)->int{ 
+  net.on_write([&](int fd)->int{ 
+    fd_t& fdd=get_fdd(fd);
+    if(!(fdd.wc>0 || fdd.rc>0)){ // skip first write 
+      fdd.wc++;       
+      return 0; // no write schedule
+    }
+    DBG("on_write %d:%d,%d\n",fd,fdd.wc,fdd.rc);
 
-  if(fmap[fd].wc>0 || fmap[fd].rc>0){ // skip first IO 
-
-//      LOG("on_write:\n");
-
-      std::ostringstream os_h,os_b;      
+    std::ostringstream os_h,os_b;      
             
-      os_b<<"<!doctype html>\n<html><head><title>smoke test page</title></head>\n<body>" \
+    os_b<<"<!doctype html>\n<html><head><title>smoke test page</title></head>\n<body>" \
             "<h1 style='color:red'>smoke test page!!!</h1>\n" \
             "connections: opened("<<in_s<<
             "): closed("<<out_s<<
@@ -82,23 +98,20 @@ int main (int argc, char *argv[])
             ") errd("<<err_s<<")\n" \
             "</body></html>\n";
 
-      auto str_b=os_b.str();
+    auto str_b=os_b.str();
 
-      os_h<<"HTTP/1.1 200 OK\r\n" \
+    os_h<<"HTTP/1.1 200 OK\r\n" \
           "Content-Type: text/html\r\n" \
           "Content-Length: "<<str_b.length()<<"\r\n" \
           "Connection: close\r\n" \
           "\r\n" << str_b;
 
-      auto str_h=os_h.str();
-      int r=write(fd,str_h.c_str(),str_h.length());
-      if(r<=0){LOG("write error, %d\n",errno);}
-      close(fd);  out_s++;
-      return 0; // no write schedule 
-      } // if first IO
-      fmap[fd].wc++;       
-      return 0; // no write schedule
-    });
+    auto str_h=os_h.str();
+    int r=write(fd,str_h.c_str(),str_h.length());
+    if(r<=0){LOGFL("write error, %d\n",errno);}
+    close(fd);  out_s++;
+    return 0; // no write schedule 
+  });
 
 
   smoke_net_run(&net,port);  

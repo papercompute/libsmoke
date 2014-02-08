@@ -1,17 +1,35 @@
-# smoke
+# libsmoke
 
-[smoke](https://github.com/papercompute/smoke-epoll) high performance low latency multi-threaded/processed udp/tcp/http/ws server built on top of linux epoll/pfring
+[smoke](https://github.com/papercompute/smoke-epoll) high performance low latency multi-threaded/processed udp/tcp/http/ws server lib built on top of linux epoll/pfring
 
-current state: very experimental
+## current state: 
 
-design goals:
+very experimental
 
-* no complexity, no external deps
-* accepting thread(s) / round robin
-* processing thread(s) / IO
-* use event.data.fd w/ both IN | OUT
+## design goals:
 
-testing:
+* no complexity
+* low latency & high performance
+
+## applications:
+
+* mass multiplayer games
+* realtime apps
+
+## great libs & frameworks:
+
+[nodejs](https://github.com/joyent/node) [libuv](https://github.com/joyent/libuv)
+[go](http://golang.org)[erlang](http://www.erlang.org/)
+[libev](http://software.schmorp.de/pkg/libev.html)[libevent](http://libevent.org/)[libphenom](http://facebook.github.io/libphenom/)
+[tornado](http://www.tornadoweb.org)
+[gevent](http://www.gevent.org)
+[akka](http://akka.io/)
+[play](http://www.playframework.com)
+
+
+
+
+testing utils:
 
 sudo sh -c "ulimit -n 65535 && exec su $LOGNAME"
 

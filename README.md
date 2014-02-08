@@ -19,11 +19,17 @@ very experimental
 ## great libs & frameworks:
 
 [nodejs](https://github.com/joyent/node) [libuv](https://github.com/joyent/libuv)
-[go](http://golang.org)[erlang](http://www.erlang.org/)
-[libev](http://software.schmorp.de/pkg/libev.html)[libevent](http://libevent.org/)[libphenom](http://facebook.github.io/libphenom/)
+
+[go](http://golang.org) [erlang](http://www.erlang.org/)
+
+[libev](http://software.schmorp.de/pkg/libev.html) [libevent](http://libevent.org/) [libphenom](http://facebook.github.io/libphenom/)
+
 [tornado](http://www.tornadoweb.org)
+
 [gevent](http://www.gevent.org)
+
 [akka](http://akka.io/)
+
 [play](http://www.playframework.com)
 
 

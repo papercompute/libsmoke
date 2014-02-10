@@ -1,30 +1,20 @@
+#include "smoke_config.h"
+
 #include "smoke.h"
 
 #include <fstream>
 #include <atomic>
 
+smoke::net_t net;
 
 std::atomic<int> in_s;
 std::atomic<int> out_s;
 std::atomic<int> err_s;
 
-int main (int argc, char *argv[])
-{
-  if (argc != 2) {
-    fprintf (stderr, "Usage: %s [port]\n", argv[0]);
-    exit (EXIT_FAILURE);
-  }
+void serve(int port){
 
-  in_s=0;
-  out_s=0;
-  err_s=0;
+  in_s=out_s=err_s=0;
 
-  int port = atoi(argv[1]);
-
-
-  smoke::net_t net;
-
- 
   net.on_connect([](int fd){
     in_s++;
   });
@@ -63,7 +53,21 @@ int main (int argc, char *argv[])
       return 0; 
     });
 
-  smoke_net_run(&net,port);  
 
+smoke_net_run(&net,port);
+
+}
+
+
+int main (int argc, char *argv[])
+{
+  if (argc != 2) {
+    fprintf (stderr, "Usage: %s [port]\n", argv[0]);
+    exit (EXIT_FAILURE);
+  }
+  int port = atoi(argv[1]);
+
+  serve(port);
+    
   return EXIT_SUCCESS;  
 }

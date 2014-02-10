@@ -11,6 +11,7 @@ std::atomic<int> in_s;
 std::atomic<int> out_s;
 std::atomic<int> err_s;
 
+namespace srv{
 // fd connection data
 struct fd_t
 {
@@ -20,9 +21,6 @@ struct fd_t
  void clear(){wc=rc=0;};
 };
 
-smoke::net_t net; 
-
-// connections map fmap[fd]
 std::unordered_map<int,fd_t> fmap;  
 fd_t fdd[FDD_CACHE_RANGE];
 
@@ -35,6 +33,11 @@ fd_t& get_fdd(int fd){
  return fmap[fd];
 };
 
+}; // srv
+
+
+
+smoke::net_t net; 
 
 int main (int argc, char *argv[])
 {
@@ -43,15 +46,15 @@ int main (int argc, char *argv[])
     exit (EXIT_FAILURE);
   }
 
-  in_s=0;
-  out_s=0;
-  err_s=0;
+  in_s=out_s=err_s=0;
 
   int port = atoi(argv[1]);
+
+
  
   net.on_connect([&](int fd){
     in_s++;
-    fd_t& fdd=get_fdd(fd);
+    srv::fd_t& fdd=srv::get_fdd(fd);
     fdd.clear();
     DBG("on_connect %d\n",fd);
   });
@@ -62,7 +65,7 @@ int main (int argc, char *argv[])
   });
 
   net.on_data([&](int fd,const char* data,int nread)->int{
-    fd_t& fdd=get_fdd(fd);
+    srv::fd_t& fdd=srv::get_fdd(fd);
     if(fdd.rc>0){ // no more writes
       LOG("fdd.rc>0\n");
       return 0; 
@@ -81,7 +84,7 @@ int main (int argc, char *argv[])
   });
 
   net.on_write([&](int fd)->int{ 
-    fd_t& fdd=get_fdd(fd);
+    srv::fd_t& fdd=srv::get_fdd(fd);
     if(!(fdd.wc>0 || fdd.rc>0)){ // skip first write 
       fdd.wc++;       
       return 0; // no write schedule

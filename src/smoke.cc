@@ -21,7 +21,7 @@
 #define WAIT_TO_A (-1)
 #define WAIT_TO_P (-1)
 
-#define R_BUF_MAX 4096*4
+#define R_BUF_MAX 4096
 
 struct event_info_t
 {
@@ -104,7 +104,7 @@ static void* accepting_thread(event_info_t* ei)
   struct epoll_event *events;
   smoke::net_t *net = ei->net;
 #ifdef USE_ON_CONNECT_CB                 
-  std::function<void(int fd)> on_connect_cb=net->on_connect_cb;
+  smoke::on_connect_fn_t on_connect_cb=net->on_connect_cb;
   ASSERT(on_connect_cb);
 #endif
   sfd = ei->sfd;  
@@ -190,19 +190,19 @@ static void* processing_thread(event_info_t* ei)
 #ifdef USE_ON_DATA_CB  
   char buf[R_BUF_MAX]; 
   int n,nread;
-  std::function<int(int fd,const char* data,int nread)> on_data_cb=net->on_data_cb;
+  smoke::on_data_fn_t on_data_cb=net->on_data_cb;
   ASSERT(on_data_cb);
 #endif
 #ifdef USE_ON_WRITE_CB  
-  std::function<int(int fd)> on_write_cb=net->on_write_cb;
+  smoke::on_write_fn_t on_write_cb=net->on_write_cb;
   ASSERT(on_write_cb);
 #endif
 #ifdef USE_ON_READ_CB  
-  std::function<int(int fd)> on_read_cb=net->on_read_cb;
+  smoke::on_read_fn_t on_read_cb=net->on_read_cb;
   ASSERT(on_read_cb);
 #endif  
 #ifdef USE_ON_CLOSE_CB  
-  std::function<void(int fd,int err)> on_close_cb=net->on_close_cb;
+  smoke::on_close_fn_t on_close_cb=net->on_close_cb;
   ASSERT(on_close_cb);
 #endif  
 
@@ -222,7 +222,6 @@ static void* processing_thread(event_info_t* ei)
     for (i = 0; i < nfds; i++){
 
       fd = events [i].data.fd;
-//      u64 = events [i].data.u64;
 //      LOG("fd %d,es %x ev %d:%d\n",fd,events[i].events,events[i].events & EPOLLOUT, events[i].events & EPOLLIN);
 
       if ( events[i].events & ~(EPOLLIN | EPOLLOUT) ){
@@ -245,8 +244,16 @@ static void* processing_thread(event_info_t* ei)
 #endif        
 #ifdef USE_ON_DATA_CB  
 //        LOG("on_data_cb\n");
-        n = 0; while ((nread = read (fd, buf + n, R_BUF_MAX-1))>0){          
-          n += nread; 
+        n = 0; while ((nread = read (fd, buf + n, R_BUF_MAX-1-n))>0){          
+          n += nread;
+          if(n>=(R_BUF_MAX-1)){
+            LOG("buffer overflow");
+#ifdef USE_ON_CLOSE_CB
+          on_close_cb(fd,1);  
+#endif                
+          close(fd);
+          goto __cont1;
+          } 
         }
         if ((nread == -1 && errno!= EAGAIN) || (n==0)){
 #ifdef USE_ON_CLOSE_CB
@@ -261,6 +268,7 @@ static void* processing_thread(event_info_t* ei)
            epoll_ctl (pfd, EPOLL_CTL_MOD, fd, &event);
         }
 #endif
+      __cont1:
        continue;
       } // IN
 

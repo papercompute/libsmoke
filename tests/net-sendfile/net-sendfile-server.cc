@@ -1,3 +1,5 @@
+#include "smoke_config.h"
+
 #include "smoke.h"
 
 #include <fstream>
@@ -119,7 +121,7 @@ int main (int argc, char *argv[])
   });
 
 
-  smoke_net_run(&net,port);  
+  smoke_net_run(&net,"127.0.0.1",port);  
 
   return EXIT_SUCCESS;  
 }

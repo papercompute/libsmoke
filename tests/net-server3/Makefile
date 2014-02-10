@@ -13,8 +13,8 @@ CFLAGS+=-std=c++11 -I$(CODEDIR) -I.
 CODE=$(CODEDIR)/smoke
 APP=net-server
 
-$(CODE): $(CODE).h $(CODE).cc $(APP).cc
-	$(CXX) $(CFLAGS) $(CODE).cc $(APP).cc $(LDFLAGS) -o $(APP) 
+$(CODE): $(CODE).h $(APP).cc
+	$(CXX) $(CFLAGS) $(APP).cc $(LDFLAGS) -o $(APP) 
 
 clean:
 	rm $(APP)

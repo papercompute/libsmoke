@@ -1,3 +1,9 @@
+/* 
+
+smoke.h core module 
+
+*/
+
 #ifndef _SMOKE_H_
 #define _SMOKE_H_
 

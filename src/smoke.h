@@ -220,7 +220,11 @@ void* accepting_thread(event_info_t* ei)
 
                   event.events = EPOLL_EVENTS;
 
-//http://linux.die.net/man/7/epoll When used as an edge-triggered interface, for performance reasons, it is possible to add the file descriptor inside the epoll interface (EPOLL_CTL_ADD) once by specifying (EPOLLIN|EPOLLOUT). This allows you to avoid continuously switching between EPOLLIN and EPOLLOUT calling epoll_ctl(2) with EPOLL_CTL_MOD.
+// http://linux.die.net/man/7/epoll When used as an edge-triggered interface, for performance reasons, 
+// it is possible to add the file descriptor inside the epoll interface (EPOLL_CTL_ADD) 
+// once by specifying (EPOLLIN|EPOLLOUT). This allows you to avoid continuously switching between 
+// EPOLLIN and EPOLLOUT calling epoll_ctl(2) with EPOLL_CTL_MOD.
+
 
 //        typedef union epoll_data {
 //               void    *ptr;

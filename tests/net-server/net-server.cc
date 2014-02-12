@@ -5,6 +5,8 @@
 #include <fstream>
 #include <atomic>
 
+#define HTTPOK "HTTP/1.1 200 OK" CRLF "Content-Type: text/html" CRLF "Content-Length: 2" CRLF "Connection: close" CRLF CRLF "ok"
+
 smoke::net_t net;
 
 std::atomic<int> in_s;
@@ -26,7 +28,8 @@ void serve(int port){
   net.on_data([](int fd,const char* data,int nread)->int{
  
   //    LOGF("on_data[%d]:\n%s",nread,data);
-
+    write(fd,HTTPOK,sizeof(HTTPOK)-1);
+/*
       std::ostringstream os_h,os_b;      
             
       os_b<<"<!doctype html>\n<html><head><title>smoke test page</title></head>\n<body>" \
@@ -48,6 +51,7 @@ void serve(int port){
       auto str_h=os_h.str();
       int r=write(fd,str_h.c_str(),str_h.length());
       ASSERT(r>0);
+*/      
       close(fd);
       out_s++;
       return 0; 

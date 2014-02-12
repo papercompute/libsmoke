@@ -16,6 +16,33 @@ very experimental
 * mass multiplayer games
 * realtime apps
 
+### sample code
+
+```c
+  // simple tcp server
+  smoke::net_t net;
+
+  net.on_connect([](int fd){
+   // on connect event
+  });
+
+  net.on_close([](int fd,int err){
+  // on close event
+  });
+
+  net.on_data([](int fd,const char* data,int nread)->int{
+  // on data event
+
+    int r=write(fd,"hello",5);
+    close(fd);
+    return 0; 
+  });
+
+  // run IO loop
+  smoke_net_run(&net,"127.0.0.1",port);
+
+```
+
 ### great libs & frameworks:
 
 [nodejs](https://github.com/joyent/node) [libuv](https://github.com/joyent/libuv)

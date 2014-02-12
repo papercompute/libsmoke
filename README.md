@@ -1,6 +1,6 @@
 ## libsmoke
 
-[smoke](https://github.com/papercompute/smoke-epoll) high performance low latency multi-threaded/processed udp/tcp/http/ws server lib built on top of linux epoll/pfring
+[smoke](https://github.com/papercompute/smoke-epoll) server lib built on top of linux epoll
 
 ### current state: 
 

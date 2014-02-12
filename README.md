@@ -78,24 +78,25 @@ fd_t& get_fdd(int fd){
 
 
   net.on_connect([&](int fd){
-    in_s++;
+    in_s++; // global counter
     srv::fd_t& fdd=srv::get_fdd(fd);
-    fdd.clear();
+    fdd.clear(); // clear counters
   });
 
   net.on_close([](int fd,int err){
-    err_s++;
+    err_s++; // global counter
   });
 
   net.on_data([&](int fd,const char* data,int nread)->int{
-    srv::fd_t& fdd=srv::get_fdd(fd);
-    if(fdd.rc>0){ // no more writes
+    srv::fd_t& fdd=srv::get_fdd(fd); // get fd data
+    if(fdd.rc>0){ // no more writes to me!
       LOG("fdd.rc>0\n");
       return 0; 
     }
     fdd.rc++;
 
     if ( nread<12 || strncmp(data,"GET / HTTP",10) != 0){
+      // write respond & close fd	
       int r=write(fd,HTTP404,sizeof(HTTP404)-1);
       if(r<=0){LOG("write header error, %d\n",errno);}
       close(fd);
@@ -103,17 +104,19 @@ fd_t& get_fdd(int fd){
       return 0;
     }
 
-    return 1; 
+    return 1; // schedule on_write
   });
 
   net.on_write([&](int fd)->int{ 
     srv::fd_t& fdd=srv::get_fdd(fd);
-    if(!(fdd.wc>0 || fdd.rc>0)){ // skip first write 
+    if(!(fdd.wc>0 || fdd.rc>0)){ // skip first write, it's fired immediatly after connect 
       fdd.wc++;       
       return 0; // no write schedule
     }
-    
+
     DBG("on_write %d:%d,%d\n",fd,fdd.wc,fdd.rc);
+
+    // use c++ stream to prepare respond
 
     std::ostringstream os_h,os_b;      
             
@@ -134,6 +137,7 @@ fd_t& get_fdd(int fd){
           "\r\n" << str_b;
 
     auto str_h=os_h.str();
+    // write respond & close
     int r=write(fd,str_h.c_str(),str_h.length());
     if(r<=0){LOGFL("write error, %d\n",errno);}
     close(fd);  out_s++;

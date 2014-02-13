@@ -1,0 +1,2 @@
+* transfoem fd_t to sock_t data associated to fd, assign cbs to sock,
+like nodejs, that's flexibility to chain cbs.

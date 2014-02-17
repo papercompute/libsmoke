@@ -186,7 +186,6 @@ int create_and_connect(const char* host, int port)
   return -1;
  }
 
- make_socket_non_blocking(fd);
 
  memset(&sock_addr, 0, sizeof(sock_addr));
  sock_addr.sin_family = AF_INET;
@@ -204,6 +203,8 @@ int create_and_connect(const char* host, int port)
   close(fd);
   return -1;
  } 
+
+ make_socket_non_blocking(fd);
 
  return fd;
 }
@@ -452,7 +453,7 @@ int net_connect_client(const char* host,int portno)
 
   fd = create_and_connect(host,portno);
   if (fd == -1){
-    FATAL("create_and_bind");
+    FATAL("create_and_connect");
   }
 
   make_socket_non_blocking (fd);

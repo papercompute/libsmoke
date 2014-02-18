@@ -1,6 +1,6 @@
-## libsmoke
+## smoke engine
 
-[smoke](https://github.com/papercompute/smoke-epoll) server lib built on top of linux epoll
+[smokengine](https://github.com/papercompute/smokengine) native performance for network apps
 
 ### current state: 
 
@@ -43,7 +43,7 @@ very experimental
 
 ```
 
-### sample code with session data
+### sample code with connection data
 
 ```c
 

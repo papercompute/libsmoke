@@ -21,15 +21,26 @@ struct fd_t
  void clear(){wc=rc=0;};
 };
 
+
+struct http_req_t : fd_t
+{
+ int fd;
+ int method; // http req method
+ char* url_path; // http req url
+ char* url_query; // http req url
+ const char* body; // body
+};
+
+/*
 struct fd_http_t : fd_t
 {
  int method; // http req method
  char* url_path; // http req url
  char* url_query; // http req url
- char* headers[8]; // headers
+ //char* headers[8]; // headers
  const char* body; // body
 };
-
+*/
 
 }; // namespace data
 

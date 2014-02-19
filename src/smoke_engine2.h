@@ -1,16 +1,11 @@
 /* 
 
-smoke_engine1.h core module
-
-multithreaded implementation
-
-accepting thread(s)
-processing thread(s) 
+smoke_engine2.h core module 
 
 */
 
-#ifndef _SMOKE_H_
-#define _SMOKE_H_
+#ifndef _SMOKE_ENGINE_H_
+#define _SMOKE_ENGINE_H_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,59 +38,6 @@ processing thread(s)
 namespace smoke {
 
 
-
-
-typedef std::function<void(int fd)> on_connect_fn_t; 
-typedef std::function<void(int fd,int err)> on_close_fn_t;
-typedef std::function<int(int fd)> on_read_fn_t;
-typedef std::function<int(int fd)> on_write_fn_t;
-typedef std::function<int(int fd,const char* data,int nread)> on_data_fn_t;
-
-struct net_t;
-
-struct event_info_t
-{
-  int id;
-  net_t *net;  
-};
-
-// global descriptors
-
-int gafd[A_TH_N], gpfd[P_TH_N];
-pthread_t ga_threads[A_TH_N];  
-pthread_t gp_threads[P_TH_N];    
-event_info_t gaei[A_TH_N];
-event_info_t gpei[P_TH_N];
-
-int net_init (net_t* net);
-
-
-struct net_t
-{
-  net_t():
-  on_connect_cb(nullptr),
-  on_close_cb(nullptr),
-  on_read_cb(nullptr),
-  on_write_cb(nullptr),
-  on_data_cb(nullptr)
-  {
-    net_init(this);
-  };
-  on_connect_fn_t on_connect_cb;  
-  on_close_fn_t on_close_cb;  
-  on_read_fn_t on_read_cb;  
-  on_write_fn_t on_write_cb;  
-  on_data_fn_t on_data_cb;  
-
-  void on_data(on_data_fn_t cb){on_data_cb=cb;}    
-  void on_read(on_read_fn_t cb){on_read_cb=cb;}    
-  void on_write(on_write_fn_t cb){on_write_cb=cb;}    
-  void on_connect(on_connect_fn_t cb){on_connect_cb=cb;}    
-  void on_close(on_close_fn_t cb){on_close_cb=cb;}    
-};
-
-
-
 // validate
 #ifdef USE_ON_DATA_CB 
  #ifdef USE_ON_READ_CB 
@@ -115,6 +57,49 @@ struct net_t
 
 #define R_BUF_MAX 4096
 
+
+int gafd, gpfd;
+struct epoll_event *ga_events;
+struct epoll_event *gp_events;
+
+
+typedef std::function<void(int fd)> on_connect_fn_t; 
+typedef std::function<void(int fd,int err)> on_close_fn_t;
+typedef std::function<int(int fd)> on_read_fn_t;
+typedef std::function<int(int fd)> on_write_fn_t;
+typedef std::function<int(int fd,const char* data,int nread)> on_data_fn_t;
+
+struct net_t;
+
+int net_init (net_t* net);
+
+
+struct net_t
+{
+  net_t():
+  on_connect_cb(nullptr),
+  on_close_cb(nullptr),
+  on_read_cb(nullptr),
+  on_write_cb(nullptr),
+  on_data_cb(nullptr)
+  {
+    net_init();
+  };
+  on_connect_fn_t on_connect_cb;  
+  on_close_fn_t on_close_cb;  
+  on_read_fn_t on_read_cb;  
+  on_write_fn_t on_write_cb;  
+  on_data_fn_t on_data_cb;  
+
+  void on_data(on_data_fn_t cb){on_data_cb=cb;}    
+  void on_read(on_read_fn_t cb){on_read_cb=cb;}    
+  void on_write(on_write_fn_t cb){on_write_cb=cb;}    
+  void on_connect(on_connect_fn_t cb){on_connect_cb=cb;}    
+  void on_close(on_close_fn_t cb){on_close_cb=cb;}    
+};
+
+
+ 
 
 int make_socket_non_blocking (int sfd)
 {
@@ -193,6 +178,7 @@ int create_and_connect(const char* host, int port)
   return -1;
  }
 
+ make_socket_non_blocking(fd);
 
  memset(&sock_addr, 0, sizeof(sock_addr));
  sock_addr.sin_family = AF_INET;
@@ -211,40 +197,42 @@ int create_and_connect(const char* host, int port)
   return -1;
  } 
 
- make_socket_non_blocking(fd);
-
  return fd;
 }
 
 
 #define EPOLL_EVENTS EPOLLRDHUP | EPOLLHUP | EPOLLERR | EPOLLIN | EPOLLOUT | EPOLLET
 
-void* accepting_thread(event_info_t* ei)
+void accepting(net_t* net)
 {
 
   int i,s,nfds;
-  int sfd,afd;
+  int sfd;//,afd;
 
   static int t=0;
 
   struct epoll_event event;
-  struct epoll_event *events;
-  net_t *net = ei->net;
+  //struct epoll_event *events;
+  //net_t *net = ei->net;
 #ifdef USE_ON_CONNECT_CB                 
   on_connect_fn_t on_connect_cb=net->on_connect_cb;
   ASSERT(on_connect_cb);
 #endif
-   int id=ei->id;
-   afd = gafd[id];
+   //int id=ei->id;
+   //afd = gafd[id];
 
-   events = (struct epoll_event *)calloc (MAXEVENTS_A, sizeof event);
-   struct sockaddr in_addr; socklen_t in_len; int infd;
+   //events = (struct epoll_event *)calloc (MAXEVENTS_A, sizeof event);
+   events = ga_events;
+
+   struct sockaddr in_addr; 
+   socklen_t in_len; 
+   int infd;
    in_len = sizeof in_addr;
 
 
-    while(1){
+    //while(1){
 
-    nfds = epoll_wait (afd, events, MAXEVENTS_A, WAIT_TO_A);    
+    nfds = epoll_wait (gafd, events, MAXEVENTS_A, 0);    
      
     for (i = 0; i < nfds; i++){
 
@@ -253,7 +241,7 @@ void* accepting_thread(event_info_t* ei)
     if ( (events[i].events & EPOLLIN)!=EPOLLIN ) {
         close (events[i].data.fd);
         continue;
-      }
+    }
 
               while (1){
                   infd = accept (sfd, &in_addr, &in_len);
@@ -300,7 +288,7 @@ void* accepting_thread(event_info_t* ei)
 
     } // for
 
-    } // while(1)
+    //} // while(1)
 
     return NULL;
 }
@@ -342,7 +330,8 @@ void* processing_thread(event_info_t* ei)
    
   pfd = gpfd[id]; 
 
-  events = (struct epoll_event *)calloc (MAXEVENTS_P, sizeof event);
+//  events = (struct epoll_event *)calloc (MAXEVENTS_P, sizeof event);
+  events = gp_events;
 
   while (1) {
     
@@ -373,9 +362,9 @@ void* processing_thread(event_info_t* ei)
 #endif        
 #ifdef USE_ON_DATA_CB  
 //        LOG("on_data_cb\n");
-        n = 0; while ((nread = read (fd, buf + n, (R_BUF_MAX-1)-n))>0){          
+        n = 0; while ((nread = read (fd, buf + n, R_BUF_MAX-n))>0){          
           n += nread;
-          if(n>=(R_BUF_MAX-1)){
+          if(n>=R_BUF_MAX){
             // buf overflow
 #ifdef USE_ON_CLOSE_CB
           on_close_cb(fd,1);  
@@ -383,7 +372,7 @@ void* processing_thread(event_info_t* ei)
           close(fd);
           goto __cont1;
           } 
-        } // while
+        }
         if ((nread == -1 && errno!= EAGAIN) || (n==0)){
 #ifdef USE_ON_CLOSE_CB
           on_close_cb(fd,1);  
@@ -424,7 +413,7 @@ void* processing_thread(event_info_t* ei)
 }
 
 
-int net_create_server(const char* host,int portno)
+int smoke_create_server(const char* host,int portno)
 {
   int i;
   int sfd;
@@ -452,15 +441,14 @@ int net_create_server(const char* host,int portno)
   return sfd;
 }
 
-int net_connect_client(const char* host,int portno)
+int smoke_connect_client(const char* host,int portno)
 {
   int fd;
-  static int t=0;
   struct epoll_event event;
 
   fd = create_and_connect(host,portno);
   if (fd == -1){
-    FATAL("create_and_connect");
+    FATAL("create_and_bind");
   }
 
   make_socket_non_blocking (fd);
@@ -468,12 +456,10 @@ int net_connect_client(const char* host,int portno)
   event.data.fd = fd;
   event.events = EPOLL_EVENTS;
 
-  if (epoll_ctl (gpfd[t], EPOLL_CTL_ADD, fd, &event) == -1) {
+  if (epoll_ctl (gpfd, EPOLL_CTL_ADD, fd, &event) == -1) {
     FATAL ("epoll_ctl");
   }
 
-  t=(t+1)%P_TH_N; // round robin
- 
   return fd;
 }
 
@@ -482,69 +468,15 @@ int net_connect_client(const char* host,int portno)
 int net_init (net_t* net)
 {
  int i;
-// int s;
-  // accepting epoll
-for(i=0;i<A_TH_N;i++){  
-  gafd[i] = epoll_create1 (0);
-  if (gafd[i] == -1) {
-    FATAL ("epoll_create1");
-  }
-} // for
-
-  // processing epoll
-for(i=0;i<P_TH_N;i++){  
-  gpfd[i] = epoll_create1 (0);
-  if (gpfd[i] == -1) {
-    FATAL ("epoll_create1");
-  }
-} // for
-
-return 0;
-}
-
-int net_start (net_t* net)
-{
- int i,s;
-
-for(i=0;i<A_TH_N;i++){
-  gaei[i].id=i;
-  gaei[i].net=net;
-  s = pthread_create(&ga_threads[i],NULL,(void*(*)(void*))&accepting_thread, &(gaei[i]));
-  if(s){    
-    FATALL("thread A error %d\n", s);
-  }
-} // for
-  
-for(i=0;i<P_TH_N;i++){
-  gpei[i].id=i;
-  gpei[i].net=net;
-  s = pthread_create(&gp_threads[i],NULL,(void*(*)(void*))&processing_thread, &(gpei[i]));
-  if (s){    
-    FATALL("thread P error %d\n", s);
-  }
-} // for
-
-return 0;
-}
-
-void net_loop()
-{
-
-LOG("smoke...\n");
-// smoke
-pthread_join(ga_threads[0], 0);    
-
-LOG("not here...\n");
-
-}
-
-
-void net_run(net_t* net,const char* host, int port)
-{
-
-  net_create_server(host,port);
-  net_start(net);
-  net_loop();
+ gafd = epoll_create1 (0);
+ ASSERT(gafd);
+ gpfd = epoll_create1 (0);
+ ASSERT(gpfd);
+ ga_events = (struct epoll_event *)calloc (MAXEVENTS_A, sizeof (struct epoll_event));
+ ASSERT(ga_events);
+ gp_events = (struct epoll_event *)calloc (MAXEVENTS_P, sizeof (struct epoll_event));
+ ASSERT(gp_events);
+ return 0;
 }
 
 

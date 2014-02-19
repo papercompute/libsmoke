@@ -4,6 +4,10 @@
 
 #include "smoke_http.h"
 
+#define HTTPOK "HTTP/1.1 200 OK" CRLF "Content-Type: text/html" CRLF "Content-Length: 2" CRLF "Connection: close" CRLF CRLF "ok"
+
+
+typedef smoke::data::http_req_t http_req_t;
 
 int main (int argc, char *argv[])
 {
@@ -16,18 +20,21 @@ int main (int argc, char *argv[])
   
   smoke::http::http_t app;
 
-  app.get("/counter",[&](int fd)->int{
+  app.get("/counter",[&](int fd,http_req_t& req)->int{
    DBG("get /counter %d\n",fd);
+   if(write(fd,HTTPOK,sizeof(HTTPOK)-1)<=0){LOG("write error, %d\n",errno);}
    return 0;
   }); 
 
-  app.get("/test/api",[&](int fd)->int{
+  app.get("/test/api",[&](int fd,http_req_t& req)->int{
    DBG("get /test/api %d\n",fd);
+   if(write(fd,HTTPOK,sizeof(HTTPOK)-1)<=0){LOG("write error, %d\n",errno);}
    return 0;
   }); 
 
-  app.post("/data",[&](int fd)->int{
+  app.post("/data",[&](int fd,http_req_t& req)->int{
    DBG("post /data %d\n",fd);
+   if(write(fd,HTTPOK,sizeof(HTTPOK)-1)<=0){LOG("write error, %d\n",errno);}
    return 0;
   }); 
 

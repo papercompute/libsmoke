@@ -121,7 +121,7 @@ int main (int argc, char *argv[])
   });
 
 
-  smoke_net_run(&net,"127.0.0.1",port);  
+  smoke::net_run(&net,"127.0.0.1",port);  
 
   return EXIT_SUCCESS;  
 }

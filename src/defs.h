@@ -41,6 +41,18 @@
     abort();                                              \
   } while (0)
 
+#define FATALL(fmt, params)                               \
+  do {                                                    \
+    fprintf(stderr,                                       \
+            "Fatal error in %s on line %d: " fmt "\n",               \
+            __FILE__,                                     \
+            __LINE__,                                     \
+            params);                                      \
+    fflush(stderr);                                       \
+    abort();                                              \
+  } while (0)
+
+
 #define ASSERT(expr)                                      \
  do {                                                     \
   if (!(expr)) {                                          \

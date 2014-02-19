@@ -3,6 +3,8 @@
 // number processing threads, = numCPUs
 #define P_TH_N 2
 
+#define DBG(...)
+
 // CALLBACK CODE USE
 
 // use on_connect

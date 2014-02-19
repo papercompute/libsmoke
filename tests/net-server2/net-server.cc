@@ -7,6 +7,7 @@
 
 #define HTTP404 "HTTP/1.1 404 Not Found" CRLF "Connection: close" CRLF CRLF
 
+
 std::atomic<int> in_s;
 std::atomic<int> out_s;
 std::atomic<int> err_s;
@@ -113,11 +114,11 @@ int main (int argc, char *argv[])
     int r=write(fd,str_h.c_str(),str_h.length());
     if(r<=0){LOGFL("write error, %d\n",errno);}
     close(fd);  out_s++;
-    return 0; // no write schedule 
+    return 0; // no more write schedule 
   });
 
 
-  smoke_net_run(&net,"127.0.0.1",port);  
+  smoke::net_run(&net,"127.0.0.1",port);  
 
   return EXIT_SUCCESS;  
 }

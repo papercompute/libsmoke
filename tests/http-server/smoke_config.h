@@ -7,6 +7,7 @@
 
 #define DBG LOG
 //#define DBG(...)
+//#define DBG2 LOG
 
 // CALLBACK CODE USE
 

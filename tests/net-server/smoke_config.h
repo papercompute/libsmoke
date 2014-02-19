@@ -1,6 +1,6 @@
 // number accepting threads, 1 is ok
 #define A_TH_N 1
-// number processing threads, = numCPUs
+// number processing threads, ~= numCPUs
 #define P_TH_N 2
 
 // CALLBACK CODE USE

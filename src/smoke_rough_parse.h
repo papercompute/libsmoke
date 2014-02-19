@@ -7,6 +7,7 @@ smoke_rough_parse.h parse module
 #ifndef _SMOKE_ROUGH_PARSE_H_
 #define _SMOKE_ROUGH_PARSE_H_
 
+#include "smoke_config.h"
 
 #include "smoke_data.h"
 
@@ -14,11 +15,9 @@ namespace smoke {
 namespace parse {
 
 typedef data::fd_t fd_t;
-typedef data::fd_http_t fd_http_t;
+typedef data::http_req_t http_req_t;
 
 
-#define HTTP404 "HTTP/1.1 404 Not Found" CRLF "Connection: close" CRLF CRLF
-#define HTTPOK "HTTP/1.1 200 OK" CRLF "Content-Type: text/html" CRLF "Content-Length: 2" CRLF "Connection: close" CRLF CRLF "ok"
 
 // http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol
 // HTTP REQUEST METHODS
@@ -46,7 +45,7 @@ typedef data::fd_http_t fd_http_t;
 //#define HH_ACCEPT_ENCODING 9
 #define HH_ACCEPT_LANGUAGE 10
 
-int rough_parse_http_request(const char* s, int len, fd_http_t& fdd, int& err)
+int rough_parse_http_request(const char* s, int len, http_req_t& fdd, int& err)
 {
   const char *se=s+len;
   char *p=(char*)s;

@@ -55,19 +55,19 @@ int main (int argc, char *argv[])
 
   net.on_connect([&](int fd){
       in_s++;
-      LOG("on_connect %d\n",fd);
+      DBG("on_connect %d\n",fd);
       fmap[fd].wc=0;fmap[fd].rc=0;
   });
 
 
   net.on_close([&](int fd,int err){
-      LOG("on_close %d\n",fd);
+      DBG("on_close %d\n",fd);
       err_s++;
   });
 
   net.on_data([&](int fd,const char* data,int nread)->int{
      if(fmap[fd].rc==0){
-      LOG("on_data fd:%d [%d]:\n%s\n",fd,nread,data);
+      DBG("on_data fd:%d [%d]:\n%s\n",fd,nread,data);
       fmap[fd].rc++;
       
       // GET / HTTP/1.1 
@@ -101,7 +101,7 @@ int main (int argc, char *argv[])
 
   net.on_write([&](int fd)->int{
      if(fmap[fd].wc>0 || fmap[fd].rc>0){ // skip first IO 
-     LOG("on_write %d\n",fd);
+     DBG("on_write %d\n",fd);
      // chunk len
       std::ostringstream os_h;
       os_h<< std::hex << file_size<<CRLF;
@@ -120,7 +120,7 @@ int main (int argc, char *argv[])
       if(r<=0){ LOG("write 0 error, %d\n",errno); }
 
       // close fd
-      LOG("close %d\n",fd);
+      DBG("close %d\n",fd);
       close(fd); out_s++;
       return 0;
      } // if
@@ -129,7 +129,7 @@ int main (int argc, char *argv[])
   });
 
 
-  smoke_net_run(&net,"127.0.0.1",port);  
+  smoke::net_run(&net,"127.0.0.1",port);  
 
   return EXIT_SUCCESS;  
 }

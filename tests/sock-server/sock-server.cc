@@ -14,6 +14,8 @@
 
  #define HTTP_REQUEST \
   "GET / HTTP/1.1\r\n" \
+  "User-Agent: smoke\r\n" \
+  "Host: 173.194.32.162\r\n" \
   "Accept: */*\r\n" \
   "\r\n"
 
@@ -24,7 +26,7 @@ typedef smoke::sock::nets_t nets_t;
 nets_t nets;
 
 void serve(int port){
-/*
+
 nets.createServer("127.0.0.1",port,[](sock_t& s){
  DBG("s.connect\n");
  s.on_data([](sock_t& s,const char* data,int len)->int{
@@ -37,16 +39,16 @@ nets.createServer("127.0.0.1",port,[](sock_t& s){
   DBG("s.on_end\n");
  });
 });
-*/
-nets.run();
 
-nets.connect("127.0.0.1",port,[](sock_t& s){
+nets.run();
+/*
+nets.connect("173.194.32.162",port,[](sock_t& s){
  DBG("c.connect<<\n");
  s.write(HTTP_REQUEST,sizeof(HTTP_REQUEST)-1);
 
  s.on_data([](sock_t& s,const char* data,int len)->int{
   DBG("c.on_data\n%s\n",data);
-  s.end();
+//  s.end();
   return 0;
  });
  s.on_end([](sock_t& s){
@@ -56,7 +58,7 @@ nets.connect("127.0.0.1",port,[](sock_t& s){
  DBG("c.connect>>\n");
 
 });
-
+*/
 nets.loop();
 }
 

@@ -9,6 +9,7 @@ smoke_sock.h data module
 
 #define SOCK_CACHE_RANGE 1024
 
+
 namespace smoke {
 
 namespace sock {
@@ -23,7 +24,7 @@ typedef std::function<int(sock_t& sock)> on_sock_write_fn_t;
 // sock connection data
 struct sock_t
 {
- int fd;	
+ int fd;  
  int wc; // write counter 
  int rc; // read counter
  on_sock_data_fn_t on_sock_data_cb;
@@ -35,10 +36,10 @@ struct sock_t
  void on_data(on_sock_data_fn_t cb){on_sock_data_cb=cb;}
  void on_end(on_sock_end_fn_t cb){on_sock_end_cb=cb;}
  void end(){
- 	if(on_sock_end_cb){
- 	  on_sock_end_cb(*this);
- 	  close(fd);
- 	}
+  if(on_sock_end_cb){
+    on_sock_end_cb(*this);
+    close(fd);
+  }
  };
  int write(const char* s,int l){
   return ::write(fd,s,l);
@@ -65,18 +66,30 @@ struct nets_t : net_t
  on_sock_connect_fn_t on_sock_connect_cb;
 
 
- nets_t(){
+ nets_t()
+ {
    init();
  }
 
- void init(){
+ void run()
+ {
+  net_start(this);
+ }
+
+ void loop()
+ {
+  net_loop();
+ }
+
+ void init()
+ {
 
   on_connect([this](int fd){
    DBG("on_connect %d\n",fd);
    sock_t& sock=this->get_sock(fd);
    sock.clear();sock.fd=fd;
    if(on_sock_connect_cb){
-   	on_sock_connect_cb(sock);
+    on_sock_connect_cb(sock);
    }
   });
 
@@ -84,7 +97,7 @@ struct nets_t : net_t
    DBG("on_close %d\n",fd);
    sock_t& sock=this->get_sock(fd);
    if(sock.on_sock_end_cb){
-   	sock.on_sock_end_cb(sock);
+    sock.on_sock_end_cb(sock);
    }
   });
 
@@ -92,7 +105,7 @@ struct nets_t : net_t
    DBG("on_data %d\n",fd);
    sock_t& sock=this->get_sock(fd);
    if(sock.on_sock_data_cb){
-   	return sock.on_sock_data_cb(sock,data,nread);
+    return sock.on_sock_data_cb(sock,data,nread);
    }
    return 0;
   });
@@ -101,7 +114,7 @@ struct nets_t : net_t
    DBG("on_write %d\n",fd);
    sock_t& sock=this->get_sock(fd);
    if(sock.on_sock_write_cb){
-   	return sock.on_sock_write_cb(sock);
+    return sock.on_sock_write_cb(sock);
    }
    return 0;
   });
@@ -109,10 +122,22 @@ struct nets_t : net_t
 
  } // init
 
- void createServer(on_sock_connect_fn_t cb){on_sock_connect_cb=cb;}	
+ int createServer(const char* host,int port,on_sock_connect_fn_t cb){
+   int fd=net_create_server(host,port);
+   on_sock_connect_cb = cb;
+   return fd;   
+ }  
+
+ int connect(const char* host,int port,on_sock_connect_fn_t cb){
+   int fd=net_connect_client(host,port);
+   sock_t& sock=this->get_sock(fd);
+   sock.clear();sock.fd=fd;
+   if(cb){
+    cb(sock);
+   }
+   return fd;   
+ }  
 };
-
-
 
 
 

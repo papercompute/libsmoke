@@ -13,9 +13,9 @@ very experimental
 
 ### applications:
 
-* mass multiplayer games
-* realtime apps
-* media streaming
+* mass multiplayer
+* realtime
+* streaming
 * bigdata
 
 ### sample code net

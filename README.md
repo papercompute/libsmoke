@@ -71,6 +71,38 @@ very experimental
 
 ```
 
+### app code structure
+
+```c
+// config modules
+#include "smoke_config.h"
+
+
+// core engine modules
+#include "smoke.h"
+
+
+// middleware modules
+#include "smoke_http.h"
+
+// app modules
+#include "smoke_app1.h"
+
+// app run
+void serve()
+{
+  smoke::net_run(&net,"127.0.0.1",port);  
+}
+
+
+int main (int argc, char *argv[])
+{
+
+serve();
+
+}
+
+```
 
 ### great libs & frameworks:
 

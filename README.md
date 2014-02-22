@@ -77,13 +77,15 @@ very experimental
 // config modules
 #include "smoke_config.h"
 
-
 // core engine modules
 #include "smoke.h"
 
-
 // middleware modules
 #include "smoke_http.h"
+
+// globals
+int host_port;
+smoke::net_t net;
 
 // app modules
 #include "smoke_app1.h"
@@ -94,12 +96,12 @@ void serve()
   smoke::net_run(&net,"127.0.0.1",port);  
 }
 
-
 int main (int argc, char *argv[])
 {
 
-serve();
+  host_port = atoi(argv[1]);
 
+  serve();
 }
 
 ```

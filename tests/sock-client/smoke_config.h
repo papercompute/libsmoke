@@ -1,9 +1,9 @@
 // number accepting threads, 1 is ok
 #define A_TH_N 1
 // number processing threads, = numCPUs
-#define P_TH_N 4
+#define P_TH_N 2
 // fd data cache
-#define FDD_CACHE_RANGE 1024*4
+#define FDD_CACHE_RANGE 1024*16
 
 #define DBG LOG
 //#define DBG(...)

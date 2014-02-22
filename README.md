@@ -19,7 +19,7 @@ very experimental
 ### sample code net
 
 ```c
-  // simple tcp server
+  // plain tcp server
   smoke::net_t net;
 
   net.on_connect([](int fd){
@@ -68,6 +68,64 @@ very experimental
 
    
   app.run("127.0.0.1",port);
+
+```
+
+### sock fd data
+
+```c
+
+// server code
+
+  nets_t net1; 
+
+   net1.createServer("127.0.0.1",port,[](sock_t& sock){
+ 
+   sock.on_data([](sock_t& sock,const char* data, int nread){
+    DBG("sock.on_data fd=%d\n",sock.fd);
+    return 1;
+   });
+
+   sock.on_write([](sock_t& sock){
+    char buf[128];
+    int l=sprintf(buf,"hello from sock.on_write %d\n",sock.wc); 
+    if(write(sock.fd,buf,l)!=l){LOG("write error\n");};
+    sock.wc++;
+    if(sock.wc>3){
+     sock.end(); 
+     return 0;
+    }
+    return 1;
+   });
+
+   sock.on_end([](sock_t& sock){
+    //
+   });
+
+  });
+
+// client, non-blocking connect
+
+smoke::sock::connect("127.0.0.1",port,[](sock_t& s){
+
+ s.on_data([](sock_t& s,const char* data,int len)->int{
+  s.rc++;
+  if(s.rc>3){
+   s.end();
+   return 0;
+  }
+  return 1;
+ });
+
+ // fire after connect
+ s.on_write([](sock_t& s){
+  write(s.fd,HTTP_REQUEST,sizeof(HTTP_REQUEST)-1);
+  return 0;
+ });
+
+ s.on_end([](sock_t& s){
+ });
+
 
 ```
 

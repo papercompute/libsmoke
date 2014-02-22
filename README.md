@@ -9,7 +9,7 @@ very experimental
 ### design goals:
 
 * no complexity
-* low latency & high performance
+* low latency, high performance & scalability
 
 ### applications:
 
@@ -90,6 +90,7 @@ very experimental
 
    sock.on_write([](sock_t& sock){
     char buf[128];
+    // printf is slow, just for testin'
     int l=sprintf(buf,"hello from sock.on_write %d\n",sock.wc); 
     if(write(sock.fd,buf,l)!=l){LOG("write error\n");};
     sock.wc++;

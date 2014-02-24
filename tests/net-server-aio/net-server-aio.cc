@@ -1,6 +1,9 @@
 #include "smoke_config.h"
 
-#include "smoke_engine1a.h"
+#include "smoke_engine1.h"
+
+#include <aio.h>
+
 
 #include <fstream>
 #include <atomic>
@@ -93,6 +96,7 @@ int main (int argc, char *argv[])
 
   int port = atoi(argv[1]);
 
+/*
   net.on_idle([](int th){
     idl_s++;
     if(idl_s % 10000000 == 0){
@@ -100,7 +104,7 @@ int main (int argc, char *argv[])
       DBG("on_idle %d\n",i);
     }
   });
-
+*/
  
   net.on_connect([&](int fd){
     srv::fd_t& fdd=srv::get_fdd(fd);
@@ -146,7 +150,8 @@ int main (int argc, char *argv[])
     // test read complition
     int ret;
     if ((ret = aio_return( &fdd.acb )) <= 0) {
-      if(fdd.rc<10000) return 1;
+      //if(fdd.rc<10000) 
+        return 1;
       LOG("aio_return error\n");
       close(fd);err_s++;
       return 0; 

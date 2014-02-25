@@ -1,10 +1,11 @@
 #include "smoke_config.h"
 
-#include "smoke_engine1a.h"
+#include "smoke_engine1.h"
 
 #include <aio.h>
 
-#include <list>
+Listing 5. Using signals as notification for AIO requests
+http://www.ibm.com/developerworks/library/l-async/#N1005D
 
 #include <fstream>
 #include <atomic>
@@ -19,9 +20,6 @@ std::atomic<int> idl_s;
 
 #define AIO_RBUF_MAX 4096
 
-#define FD_ST_RD 1
-#define FD_ST_WR 2
-
 namespace srv{
 // fd connection data
 struct fd_t
@@ -29,20 +27,19 @@ struct fd_t
  struct aiocb acb; 
  int wc; // write counter 
  int rc; // read counter
- int st; // state
- int t; // thread id
- fd_t():wc(0),rc(0),st(0){
+ fd_t():wc(0),rc(0){
   bzero( (char *)&acb, sizeof(acb) );
   acb.aio_fildes = 0;
   acb.aio_buf = new char[AIO_RBUF_MAX];
   acb.aio_nbytes = AIO_RBUF_MAX-1;
   acb.aio_offset = 0;
  };
- void clear(){wc=rc=st=0;};
+ void clear(){wc=rc=0;};
 };
 
 std::unordered_map<int,fd_t> fmap;  
 fd_t fdd[FDD_CACHE_RANGE];
+
 fd_t& get_fdd(int fd){
  if(fd>=0 && fd<FDD_CACHE_RANGE){
   // get from faster array
@@ -51,9 +48,6 @@ fd_t& get_fdd(int fd){
  // get from std::unordered_map
  return fmap[fd];
 };
-
-
-//std::list<fd_t&> amap;  
 
 }; // srv
 
@@ -111,16 +105,13 @@ int main (int argc, char *argv[])
       int i=idl_s;
       DBG("on_idle %d\n",i);
     }
-
-
   });
 */
  
-  net.on_connect([&](int fd,int t){
+  net.on_connect([&](int fd){
     srv::fd_t& fdd=srv::get_fdd(fd);
     fdd.clear();
     fdd.acb.aio_fildes = fd;
-    fdd.t=t;
     DBG("on_connect %d\n",fd);
     in_s++;
   });
@@ -158,15 +149,12 @@ int main (int argc, char *argv[])
 
     fdd.rc++;
 
-
-   if ( aio_error( &fdd.acb ) == EINPROGRESS ){
-      return 1;
-   }
-
     // test read complition
     int ret;
     if ((ret = aio_return( &fdd.acb )) <= 0) {
-      LOG("on_read aio_return error\n");
+      //if(fdd.rc<10000) 
+        return 1;
+      LOG("aio_return error\n");
       close(fd);err_s++;
       return 0; 
     } 
@@ -187,7 +175,7 @@ int main (int argc, char *argv[])
       return 0; // no write schedule
     }
 
-    //fdd.wc++;
+    fdd.wc++;
 /*
     // test read complition
     int ret;
@@ -202,10 +190,6 @@ int main (int argc, char *argv[])
     DBG("aio %d read[%d]:\n%s\n",fd,ret,buf); 
 
 */
-
-    char* buf=(char*)fdd.acb.aio_buf;
-
-    if(fdd.wc == 1) {
     std::ostringstream os_h,os_b;      
             
     os_b<<"<!doctype html>\n<html><head><title>smoke test page</title></head>\n<body>" \
@@ -225,31 +209,8 @@ int main (int argc, char *argv[])
           "\r\n" << str_b;
 
     auto str_h=os_h.str();
-    
-    memcpy(buf,str_h.c_str(),str_h.length());
-    fdd.acb.aio_nbytes = str_h.length();
-
-    int r=aio_write(&fdd.acb);
-    ASSERT(r==0);
-    } // if fdd.wc == 1
-
-   fdd.wc++;
-
-
-   if ( aio_error( &fdd.acb ) == EINPROGRESS ){
-      return 1;
-   }
-
-    // test aio complition
-    int ret;
-    if ((ret = aio_return( &fdd.acb )) <= 0) {
-      LOG("on_write: aio_return error\n");
-      close(fd);err_s++;
-      return 0; 
-    } 
-
-    //int r=write(fd,str_h.c_str(),str_h.length());
-    //if(r<=0){LOGFL("write error, %d\n",errno);}
+    int r=write(fd,str_h.c_str(),str_h.length());
+    if(r<=0){LOGFL("write error, %d\n",errno);}
     close(fd);  out_s++;
     return 0; // no more write schedule 
   });

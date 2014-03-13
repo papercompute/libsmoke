@@ -85,6 +85,15 @@ nets_t(){
   //that=this;
 }  
  
+void run()
+ {
+  net_start(&net);
+ }
+
+ void loop()
+ {
+  net_loop();
+ }
 
 on_sock_connect_fn_t on_sock_connect_cb;
 
@@ -151,7 +160,7 @@ void init(){
 
 
  int connect(const char* host,int port,on_sock_connect_fn_t cb){
-   int fd=smoke::net_connect_client(host,port);
+   int fd=smoke::net_connect_client_non_blocking(host,port);
    sock_t& sock=get_sock(fd);
    sock.clear();sock.fd=fd;sock.t=1;
    cb(sock);

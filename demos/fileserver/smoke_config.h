@@ -1,9 +1,10 @@
 // number accepting threads, 1 is ok
-#define A_TH_N 1
+#define A_TH_N 2
 // number processing threads, = numCPUs
-#define P_TH_N 2
+#define P_TH_N 4
 
-#define DBG(...)
+#define DBG LOG
+//#define DBG(...)
 
 #define FDD_CACHE_RANGE 4096*16
 
@@ -25,7 +26,7 @@
 //#define USE_ON_CLOSE_CB
 
 // public folder
-#define FOLDER public
+#define FOLDER "public"
 
 #define FILE1 index.html
 

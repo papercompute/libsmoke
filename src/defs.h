@@ -7,31 +7,30 @@
 #define LF '\n'
 #define CR '\r'
 
-
 #define LOG(...)                   \
-  do {                                 \
+  {                                 \
     fprintf(stderr, __VA_ARGS__); \
     fflush(stderr);                    \
-  } while (0)
+  }
 
 #define LOGF(fmt, params...)        \
-  do {                                 \
+  {                                 \
     fprintf(stderr, fmt "\n", params); \
     fflush(stderr);                    \
-  } while (0)
+  }
 
-#define LOGFL(fmt, params)                                \
-  do {                                                    \
+#define LOGFL(fmt, params...)                                \
+  {                                                    \
     fprintf(stderr,                                       \
             "Log %s on line %d: " fmt "\n",               \
             __FILE__,                                     \
             __LINE__,                                     \
             params);                                      \
     fflush(stderr);                                       \
-  } while (0)
+  }
 
 #define FATAL(msg)                                        \
-  do {                                                    \
+  {                                                    \
     fprintf(stderr,                                       \
             "Fatal error in %s on line %d: %s\n",         \
             __FILE__,                                     \
@@ -39,10 +38,10 @@
             msg);                                         \
     fflush(stderr);                                       \
     abort();                                              \
-  } while (0)
+  }
 
 #define FATALL(fmt, params)                               \
-  do {                                                    \
+  {                                                    \
     fprintf(stderr,                                       \
             "Fatal error in %s on line %d: " fmt "\n",               \
             __FILE__,                                     \
@@ -50,11 +49,11 @@
             params);                                      \
     fflush(stderr);                                       \
     abort();                                              \
-  } while (0)
+  }
 
 
 #define ASSERT(expr)                                      \
- do {                                                     \
+  {                                                     \
   if (!(expr)) {                                          \
     fprintf(stderr,                                       \
             "Assertion failed in %s on line %d: %s\n",    \
@@ -63,7 +62,7 @@
             #expr);                                       \
     abort();                                              \
   }                                                       \
- } while (0)
+ }
 
 #define STRCMP1(a,b) (a == b) 
 #define STRCMP2(a,b) ((a[1] == b[1]) && (a[0] == b[0]))

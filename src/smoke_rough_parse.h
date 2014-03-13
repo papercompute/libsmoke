@@ -18,6 +18,32 @@ typedef data::fd_t fd_t;
 typedef data::http_req_t http_req_t;
 
 
+#define LO(c)            (unsigned char)(c | 0x20)
+#define IS_N(c)           ((c) >= '0' && (c) <= '9')
+#define IS_A(c)         (LO(c) >= 'a' && LO(c) <= 'z')
+#define IS_AN(c)      (IS_A(c) || IS_N(c))
+
+
+inline int rough_parse_http_url_path(const char* s, int len)
+{
+  const char *se=s+len;
+  char *p=(char*)s;
+  char c;
+  while(p<se){
+    c=*p;
+    DBG("%c",c);
+   switch(c){
+    case ' ':  case '?':
+      return p-s;
+    default:
+    break;
+   }
+   if( !( IS_AN(c) || c=='/' || c=='_' || c=='.' ) ) return -1;
+   ++p;
+  } // while
+  DBG("l=%d",len);
+  return -1;
+}  
 
 // http://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol
 // HTTP REQUEST METHODS

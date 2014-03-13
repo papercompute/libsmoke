@@ -1,5 +1,9 @@
 #include "smoke_config.h"
 #include "smoke.h"
+#include "smoke_rough_parse.h"
+
+#include <aio.h>
+
 
 #include <fstream>
 #include <string>
@@ -37,9 +41,15 @@ struct file_t{
  char* hdr;
  int hsz;
 
- void init(const char* filename){
+ file_t():fd(0),sz(0),hdr(0),hsz(0){
+
+ }
+
+ int init(const char* filename){
   struct stat stat_buf;
-  fd = open(filename, O_RDONLY);
+  int f = open(filename, O_RDONLY);
+  if (f<=0) return -1;
+  fd=f;
   ASSERT(fd>0);
   fstat(fd, &stat_buf);
   sz=stat_buf.st_size;
@@ -55,7 +65,7 @@ struct file_t{
   hsz=s.length();
   hdr=new char[hsz+1];
   strncpy(hdr,s.c_str(),hsz);
-  DBG("open: hdr=%s\n",hdr);
+  return 1;
  }
 
  void end(){
@@ -88,18 +98,19 @@ fd_t& get_fdd(int fd){
  return fmap[fd];
 };
 
+
 }; // srv
 
 int serve_port;
 smoke::net_t net;
-file_t file1;
 
 typedef srv::fd_t fd_t;
 
+std::unordered_map<std::string,file_t> file_map;  
+
+
 void serve()
 {
-
-  file1.init("public/index.html");
 
   net.on_connect([&](int fd){
       DBG("on_connect %d\n",fd);
@@ -115,9 +126,6 @@ void serve()
   });
 
   net.on_read([&](int fd)->int{
-      char rbuf[32];
-      int nr;
-
       fd_t& fdd=srv::get_fdd(fd);
       DBG("on_read fd:%d, rc:%d, wc:%d\n",fd,fdd.rc,fdd.wc);
      
@@ -131,26 +139,76 @@ void serve()
 
      // 'GET /' 'filename '
 
-     nr=read(fd, rbuf, 5 + 10);
+     char rbuf[1024];
+     int nr;
+
+     nr=read(fd, rbuf, 1024);
 
       if( nr<6 || !STRCMP5(rbuf,"GET /") ){
         DBG("wrong http request\n");
+        write(fd,HTTP404,sizeof(HTTP404)-1);
+        close(fd);
+        err_s++;
+        return 0;
+      }
+
+      char* url=(char*)(rbuf+5);
+      
+      int r=smoke::parse::rough_parse_http_url_path(url,nr-5);
+      
+      if(r<0){
+        DBG("wrong http url path\n");
+        write(fd,HTTP404,sizeof(HTTP404)-1);
+        close(fd);
+        err_s++;
+        return 0;
+      }
+
+      if(r == 0){
+        url=(char*)"index.html";
+        r=10;
+      }else{
+        url[r]=0;
+      }
+
+      file_t& f1=file_map[url];
+
+      if(f1.fd==0){
+        char url_buf[128];
+        sprintf(url_buf,"%s/%s",FOLDER,url);
+
+       if(f1.init(url_buf)<=0){
+        DBG("f1.init(url_buf)<=0\n");
+        if(write(fd,HTTP404,sizeof(HTTP404)-1)<=0){LOG("write 404 error, %d\n",errno);}
+        close(fd);err_s++;
+        return 0;
+        }
+
+      }
+      else{
+        DBG("file_map %s\n",url);
+      }
+
+      if(f1.fd<0){
+       DBG("f1.fd<0\n");
         if(write(fd,HTTP404,sizeof(HTTP404)-1)<=0){LOG("write 404 error, %d\n",errno);}
         close(fd);err_s++;
         return 0;
       }
 
+      ASSERT(f1.hdr);
+      ASSERT(f1.hsz>0);
 
      int wn;
-      wn=write(fd,file1.hdr,file1.hsz);
+      wn=write(fd,f1.hdr,f1.hsz);
       if( wn<=0 ){
-       LOG("write error file1.hsz=%d,writen=%d\n",file1.hsz,wn); 
+       printf("write error file1.hsz=%d,writen=%d\n",f1.hsz,wn); 
        close(fd);err_s++; 
        return 0;
       }
 
       off_t off = 0;
-      wn = sendfile (fd, file1.fd, &off, file1.sz);  
+      wn = sendfile (fd, f1.fd, &off, f1.sz);  
       if(wn<=0){ LOG("sendfile error, %d\n",errno); }
 
       close(fd);out_s++; 

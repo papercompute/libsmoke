@@ -28,6 +28,7 @@ processing thread(s)
 #include <arpa/inet.h>
 #include <sched.h>
 #include <assert.h>
+#include <aio.h>
 
 
 #include <iostream>
@@ -43,6 +44,7 @@ processing thread(s)
 namespace smoke {
 
 
+struct net_t;
 
 
 typedef std::function<void(int fd)> on_connect_fn_t; 
@@ -51,7 +53,6 @@ typedef std::function<int(int fd)> on_read_fn_t;
 typedef std::function<int(int fd)> on_write_fn_t;
 typedef std::function<int(int fd,const char* data,int nread)> on_data_fn_t;
 
-struct net_t;
 
 struct event_info_t
 {
@@ -183,7 +184,7 @@ int create_and_bind (const char* host,int port)
 
 int create_and_connect(const char* host, int port)
 {
- int fd=-1;
+ int fd;
 
  struct sockaddr_in sock_addr; 
 // int reuseaddr_on = 1;
@@ -213,6 +214,40 @@ int create_and_connect(const char* host, int port)
 
  make_socket_non_blocking(fd);
 
+ return fd;
+}
+
+
+int create_and_connect_non_blocking(const char* host, int port)
+{
+ int fd;
+
+ struct sockaddr_in sock_addr; 
+// int reuseaddr_on = 1;
+ fd = socket(AF_INET, SOCK_STREAM, 0); 
+ if (fd <= 0){
+  LOG("socket error [%s:%u]",host,port);
+  return -1;
+ }
+
+ make_socket_non_blocking(fd);
+
+ memset(&sock_addr, 0, sizeof(sock_addr));
+ sock_addr.sin_family = AF_INET;
+ sock_addr.sin_port = htons(port);
+
+ if (inet_pton(AF_INET, host, &sock_addr.sin_addr) <= 0){
+  LOG("inet_pton error [%s:%u]",host,port);
+  close(fd);
+  return -1;
+ }
+
+ if (connect(fd, (struct sockaddr*)&sock_addr, sizeof(sock_addr)) == -1 && errno != EINPROGRESS) {
+    // report errno
+    LOG("connect error [%s:%u]",host,port);
+    close(fd);
+    return -1;
+ }
  return fd;
 }
 
@@ -369,7 +404,8 @@ void* processing_thread(event_info_t* ei)
         if(on_read_cb(fd)){
            event.data.fd = fd;  event.events = EPOLL_EVENTS;
            epoll_ctl (pfd, EPOLL_CTL_MOD, fd, &event);
-        }        
+        }
+        continue;        
 #endif        
 #ifdef USE_ON_DATA_CB  
 //        LOG("on_data_cb\n");
@@ -396,8 +432,8 @@ void* processing_thread(event_info_t* ei)
            event.data.fd = fd;  event.events = EPOLL_EVENTS;
            epoll_ctl (pfd, EPOLL_CTL_MOD, fd, &event);
         }
-#endif
       __cont1:
+#endif
        continue;
       } // IN
 
@@ -452,7 +488,7 @@ int net_create_server(const char* host,int portno)
   return sfd;
 }
 
-int net_connect_client(const char* host,int portno)
+int net_connect_client_sync(const char* host,int portno)
 {
   int fd;
   static int t=0;
@@ -463,7 +499,36 @@ int net_connect_client(const char* host,int portno)
     FATAL("create_and_connect");
   }
 
-  make_socket_non_blocking (fd);
+  LOG("net_connect_client=%s:%d\n",host,portno);
+
+//  make_socket_non_blocking (fd);
+
+  event.data.fd = fd;
+  event.events = EPOLL_EVENTS;
+
+  if (epoll_ctl (gpfd[t], EPOLL_CTL_ADD, fd, &event) == -1) {
+    FATAL ("epoll_ctl");
+  }
+
+  t=(t+1)%P_TH_N; // round robin
+ 
+  return fd;
+}
+
+int net_connect_client_non_blocking(const char* host,int portno)
+{
+  int fd;
+  static int t=0;
+  struct epoll_event event;
+
+  fd = create_and_connect_non_blocking(host,portno);
+  if (fd == -1){
+    FATAL("create_and_connect");
+  }
+
+//  LOG("net_connect_client_non_blocking=%s:%d\n",host,portno);
+
+//  make_socket_non_blocking (fd);
 
   event.data.fd = fd;
   event.events = EPOLL_EVENTS;

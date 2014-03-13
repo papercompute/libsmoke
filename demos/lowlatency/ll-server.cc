@@ -58,6 +58,12 @@ int main (int argc, char *argv[])
     in_s++;
   });
 
+  net.on_close([](int fd,int err){
+    srv::fd_t& fdd=srv::get_fdd(fd);
+    DBG("on_close %d\n",fd);
+    out_s++;
+  });
+
 
   net.on_read([](int fd)->int{
     srv::fd_t& fdd=srv::get_fdd(fd);

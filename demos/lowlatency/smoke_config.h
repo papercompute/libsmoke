@@ -1,7 +1,7 @@
 // number accepting threads, 1 is ok
-#define A_TH_N 1
+#define A_TH_N 2
 // number processing threads, = numCPUs
-#define P_TH_N 2
+#define P_TH_N 8
 // fd data cache
 #define FDD_CACHE_RANGE 1024*4*4
 
@@ -23,7 +23,7 @@
 //#define USE_ON_WRITE_CB
 
 // use on_close
-//#define USE_ON_CLOSE_CB
+#define USE_ON_CLOSE_CB
 
 
 

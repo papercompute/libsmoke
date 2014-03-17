@@ -51,7 +51,7 @@ int main (int argc, char *argv[])
   int port = atoi(argv[1]);
 
 
-  net.on_connect([&](int fd){
+  net.on_connect([](int fd){
     srv::fd_t& fdd=srv::get_fdd(fd);
     DBG("on_connect %d\n",fd);
     fdd.clear();
@@ -59,7 +59,7 @@ int main (int argc, char *argv[])
   });
 
   net.on_close([](int fd,int err){
-    srv::fd_t& fdd=srv::get_fdd(fd);
+//    srv::fd_t& fdd=srv::get_fdd(fd);
     DBG("on_close %d\n",fd);
     out_s++;
   });
@@ -76,22 +76,35 @@ int main (int argc, char *argv[])
     r=read(fd,rbuf,1024);
     if(r<=0){close(fd);out_s++;return 0;}
 
-    std::ostringstream os_h,os_b;
-    os_b<<"<!doctype html>\n<html><head><title>smoke test page</title></head>\n<body>" \
-            "<h1 style='color:red'>smoke test page!!!</h1>\n" \
-            "connections: opened("<<in_s<<"): closed("<<out_s<<
-            "): current("<<in_s-out_s<<")"<<"</body></html>\n";
+std::string str_b=
+    "{"
+    "\n\"opened\": \""+std::to_string(in_s)+"\","
+    "\n\"closed\": \""+std::to_string(out_s)+"\","
+    "\n\"current\": \""+std::to_string(in_s-out_s)+"\""
+    "\n}\n";
 
-    auto str_b=os_b.str();
-    os_h<<"HTTP/1.1 200 OK\r\n" \
-          "Content-Type: text/html\r\n" \
-          "Content-Length: "<<str_b.length()<<"\r\n" \
-          "Connection: close\r\n" \
-          "\r\n" << str_b;
+std::string str_h= 
+    "HTTP/1.1 200 OK\r\n"
+    "Content-Type: application/json; charset=utf-8\r\n"
+    "X-Powered-By: smoke\r\n"
+    "Content-Length: "+std::to_string(str_b.length())+"\r\n"
+    "Connection: close\r\n"
+    "\r\n";
 
-    auto str_h=os_h.str();
-    r=write(fd,str_h.c_str(),str_h.length());
-    if(r<=0){close(fd);out_s++;return 0;}
+
+//struct iovec {
+//    void  *iov_base;    // Starting address
+//    size_t iov_len;     // Number of bytes to transfer
+//};
+// ssize_t writev(int fd, const struct iovec *iov, int iovcnt);
+struct iovec iov[2];
+
+iov[0].iov_base = (void*)str_h.c_str(); iov[0].iov_len = str_h.length();
+iov[1].iov_base = (void*)str_b.c_str(); iov[1].iov_len = str_b.length();
+
+// http://linux.die.net/man/2/writev
+
+r = writev(fd, iov, 2);
 
     close(fd);  
     out_s++;

@@ -29,7 +29,7 @@ processing thread(s)
 #include <sched.h>
 #include <assert.h>
 #include <aio.h>
-
+#include <sys/uio.h>
 
 #include <iostream>
 #include <sstream>

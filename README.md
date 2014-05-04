@@ -18,7 +18,7 @@ very experimental
 * streaming
 * bigdata
 
-### sample code net
+### sample code net (stable)
 
 ```c
   // plain tcp server
@@ -45,7 +45,7 @@ very experimental
 
 ```
 
-### sample code http
+### sample code http (very experimental)
 
 ```c
  smoke::http::http_t app;

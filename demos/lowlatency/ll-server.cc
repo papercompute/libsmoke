@@ -5,6 +5,8 @@
 #include <fstream>
 #include <atomic>
 
+#include <stdio.h>
+
 #define HTTP404 "HTTP/1.1 404 Not Found" CRLF "Connection: close" CRLF CRLF
 
 
@@ -37,6 +39,7 @@ fd_t& get_fdd(int fd){
 
 
 
+
 smoke::net_t net; 
 
 int main (int argc, char *argv[])
@@ -49,7 +52,6 @@ int main (int argc, char *argv[])
   in_s=out_s=0;
 
   int port = atoi(argv[1]);
-
 
   net.on_connect([](int fd){
     srv::fd_t& fdd=srv::get_fdd(fd);
@@ -76,6 +78,18 @@ int main (int argc, char *argv[])
     r=read(fd,rbuf,1024);
     if(r<=0){close(fd);out_s++;return 0;}
 
+struct iovec iov[4];
+
+//struct iovec {
+//    void  *iov_base;    // Starting address
+//    size_t iov_len;     // Number of bytes to transfer
+//};
+// ssize_t writev(int fd, const struct iovec *iov, int iovcnt);
+
+#undef USE_STD
+#define USE_STD
+#ifdef USE_STD
+
 std::string str_b=
     "{"
     "\n\"opened\": \""+std::to_string(in_s)+"\","
@@ -83,7 +97,7 @@ std::string str_b=
     "\n\"current\": \""+std::to_string(in_s-out_s)+"\""
     "\n}\n";
 
-std::string str_h= 
+std::string str_h=
     "HTTP/1.1 200 OK\r\n"
     "Content-Type: application/json; charset=utf-8\r\n"
     "X-Powered-By: smoke\r\n"
@@ -91,20 +105,40 @@ std::string str_h=
     "Connection: close\r\n"
     "\r\n";
 
-
-//struct iovec {
-//    void  *iov_base;    // Starting address
-//    size_t iov_len;     // Number of bytes to transfer
-//};
-// ssize_t writev(int fd, const struct iovec *iov, int iovcnt);
-struct iovec iov[2];
-
 iov[0].iov_base = (void*)str_h.c_str(); iov[0].iov_len = str_h.length();
-iov[1].iov_base = (void*)str_b.c_str(); iov[1].iov_len = str_b.length();
+iov[1].iov_base = (void*)str_b.c_str(); iov[1].iov_len = str_b.length();    
 
 // http://linux.die.net/man/2/writev
-
 r = writev(fd, iov, 2);
+
+
+#else
+
+
+
+char wb0[128]; int l0; char wb1[128]; int l1;
+int in_=in_s; int out_=out_s;
+
+l1=sprintf(wb1,"body:\nopened:%d,\nclosed:%d,\ncurrent%d\n",in_,out_,in_-out_);
+l0=sprintf(wb0,"Content-Length: %d\r\nConnection: close\r\n\r\n",l1);
+
+// http://en.wikipedia.org/wiki/List_of_HTTP_header_fields
+
+#define HTTP200 "HTTP/1.1 200 OK\r\n"
+iov[0].iov_base = (void*)HTTP200; iov[0].iov_len = sizeof(HTTP200)-1;
+#define HTTP_XPB "X-Powered-By: smokengine\r\n"
+#define Ix 1
+iov[Ix].iov_base = (void*)HTTP_XPB;iov[Ix].iov_len = sizeof(HTTP_XPB)-1;
+//#define Ix 2
+iov[Ix+1].iov_base = (void*)wb0;  iov[Ix+1].iov_len = l0;
+iov[Ix+2].iov_base = (void*)wb1;  iov[Ix+2].iov_len = l1;
+
+
+// http://linux.die.net/man/2/writev
+r = writev(fd, iov, 4);
+
+#endif
+
 
     close(fd);  
     out_s++;

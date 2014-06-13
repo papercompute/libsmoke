@@ -3,8 +3,8 @@
 // number processing threads, = numCPUs
 #define P_TH_N 4
 
-#define DBG LOG
-//#define DBG(...)
+//#define DBG LOG
+#define DBG(...)
 
 #define FDD_CACHE_RANGE 4096*16
 

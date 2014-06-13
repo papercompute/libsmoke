@@ -17,33 +17,31 @@
 
 #define HTTP404 "HTTP/1.1 404 Not Found" CRLF "Connection: close" CRLF CRLF
 
-#define HTTP_CHUNKED_HEADER_RESPONSE \
-  "HTTP/1.1 200 OK\r\n" \
-  "Content-Type: text/html\r\n" \
-  "Connection: keep-alive\r\n" \
-  "Transfer-Encoding: chunked\r\n" \
-  "\r\n"
-
-#define HTTP_HEADER_RESPONSE \
-  "HTTP/1.1 200 OK\r\n" \
-  "Content-Type: text/html\r\n" \
-  "Connection: close\r\n" \
-  "Content-Length: "
-
 
 std::atomic<int> in_s;
 std::atomic<int> out_s;
 std::atomic<int> err_s;
+
+#define FT_UK 0
+#define FT_HTML 1
+#define FT_CSS 2
+#define FT_TXT 3
+#define FT_JS 4
+#define FT_IMG 5
+
 
 struct file_t{
  int fd;
  int sz;
  char* hdr;
  int hsz;
+ int ft;
 
- file_t():fd(0),sz(0),hdr(0),hsz(0){
+ file_t():fd(0),sz(0),hdr(0),hsz(0),ft(0){
 
  }
+
+
 
  int init(const char* filename){
   struct stat stat_buf;
@@ -54,11 +52,39 @@ struct file_t{
   fstat(fd, &stat_buf);
   sz=stat_buf.st_size;
 
+  const char* file_ext = smoke::parse::rough_parse_file_ext(filename);
+  
+  if(file_ext == nullptr){
+   ft = FT_UK;
+  }
+  else if( STRCMP4("html",file_ext) ){
+   ft = FT_HTML;
+  }
+  else if( STRCMP2("js",file_ext) ){
+   ft = FT_JS;
+  }
+ else if( STRCMP3("css",file_ext) ){
+   ft = FT_CSS;
+  }
+ else if( STRCMP3("png",file_ext) ){
+   ft = FT_IMG;
+  }
+
+  
+
   std::ostringstream os;
-  os<<"HTTP/1.1 200 OK\r\n" \
-      "Content-Type: text/html\r\n" \
-      "Content-Length: "<<sz<<"\r\n" \
-      "Connection: close\r\n" \
+  os<<"HTTP/1.1 200 OK\r\n";
+  os<<"Content-Type: ";
+  switch(ft){
+  case FT_HTML:   os<<"text/html\r\n";   break;
+  case FT_JS:   os<<"application/x-javascript\r\n";   break;
+  case FT_CSS:   os<<"text/css\r\n";   break;
+  case FT_IMG:   os<<"image/png\r\n";   break;
+  case FT_TXT:case FT_UK: default: os<<"text\r\n";
+  }
+
+  os<<"Content-Length: "<<sz<<"\r\n" \
+      "Connection: keep-alive\r\n" \
       "\r\n";
 
   auto s=os.str();
@@ -129,11 +155,11 @@ void serve()
       fd_t& fdd=srv::get_fdd(fd);
       DBG("on_read fd:%d, rc:%d, wc:%d\n",fd,fdd.rc,fdd.wc);
      
-     if(fdd.rc>0){
-       DBG("fdd.rc>0,rc:%d\n",fdd.rc);
-       close(fd);err_s++; 
-       return 0;
-     }
+//     if(fdd.rc>0){
+//       DBG("fdd.rc>0,rc:%d\n",fdd.rc);
+//       close(fd);err_s++; 
+//       return 0;
+//     }
 
      fdd.rc++;
 
@@ -146,7 +172,7 @@ void serve()
 
       if( nr<6 || !STRCMP5(rbuf,"GET /") ){
         DBG("wrong http request\n");
-        write(fd,HTTP404,sizeof(HTTP404)-1);
+        if(write(fd,HTTP404,sizeof(HTTP404)-1)<=0){}
         close(fd);
         err_s++;
         return 0;
@@ -158,7 +184,7 @@ void serve()
       
       if(r<0){
         DBG("wrong http url path\n");
-        write(fd,HTTP404,sizeof(HTTP404)-1);
+        if(write(fd,HTTP404,sizeof(HTTP404)-1)){};
         close(fd);
         err_s++;
         return 0;
@@ -189,8 +215,8 @@ void serve()
         DBG("file_map %s\n",url);
       }
 
-      if(f1.fd<0){
-       DBG("f1.fd<0\n");
+      if(f1.fd<=0){
+       DBG("f1.fd<=0\n");
         if(write(fd,HTTP404,sizeof(HTTP404)-1)<=0){LOG("write 404 error, %d\n",errno);}
         close(fd);err_s++;
         return 0;
@@ -216,7 +242,6 @@ void serve()
   });
 
   smoke::net_run(&net,"127.0.0.1",serve_port);  
-
 }
 
 
